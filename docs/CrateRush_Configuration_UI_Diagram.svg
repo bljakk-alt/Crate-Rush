@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1400" height="980" viewBox="0 0 1400 980">
+  <defs>
+    <style>
+      .title { font-family: Arial, sans-serif; font-size: 34px; font-weight: 700; fill: #172033; }
+      .subtitle { font-family: Arial, sans-serif; font-size: 17px; fill: #4b5870; }
+      .tab { fill: #f7f9fc; stroke: #9aa9bf; stroke-width: 2; rx: 16; }
+      .tabTitle { font-family: Arial, sans-serif; font-size: 21px; font-weight: 700; fill: #172033; }
+      .item { font-family: Arial, sans-serif; font-size: 15px; fill: #27364d; }
+      .note { font-family: Arial, sans-serif; font-size: 13px; fill: #56657a; font-style: italic; }
+      .locked { fill: #e8f5ec; stroke: #79b58c; stroke-width: 2; rx: 12; }
+      .open { fill: #fff6e6; stroke: #e3aa48; stroke-width: 2; rx: 12; }
+      .core { fill: #edf4ff; stroke: #7ea4d6; stroke-width: 2; rx: 12; }
+      .smallTitle { font-family: Arial, sans-serif; font-size: 16px; font-weight: 700; fill: #172033; }
+      .line { stroke: #b5c1d1; stroke-width: 2; fill: none; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1400" height="980" fill="#ffffff"/>
+  <text x="60" y="60" class="title">CrateRush Configuration UI</text>
+  <text x="60" y="90" class="subtitle">User facing configuration map, based on the agreed design discussion</text>
+
+  <rect x="60" y="125" width="1280" height="70" class="core"/>
+  <text x="85" y="158" class="smallTitle">Design principle</text>
+  <text x="85" y="183" class="item">Users configure behaviour, notifications, appearance, optional modules and integrations. Internal addon communication stays hidden.</text>
+
+  <!-- Row 1 -->
+  <rect x="60" y="235" width="290" height="210" class="tab"/>
+  <text x="85" y="270" class="tabTitle">1. General</text>
+  <text x="85" y="305" class="item">CrateRush Activation</text>
+  <text x="105" y="332" class="item">Enable only when War Mode is active</text>
+  <text x="105" y="357" class="item">Always enable CrateRush</text>
+  <text x="125" y="382" class="item">Warn me when War Mode is off</text>
+  <text x="105" y="407" class="item">Disable CrateRush</text>
+  <text x="85" y="432" class="item">Show minimap button</text>
+
+  <rect x="390" y="235" width="290" height="210" class="tab"/>
+  <text x="415" y="270" class="tabTitle">2. Notifications</text>
+  <text x="415" y="305" class="item">Event based configuration</text>
+  <text x="435" y="332" class="item">Crate events</text>
+  <text x="435" y="357" class="item">System events, e.g. shard mismatch</text>
+  <text x="435" y="382" class="item">Addon events when enabled</text>
+  <text x="415" y="412" class="item">Per event: message, placeholders,</text>
+  <text x="415" y="435" class="item">delivery, group announce, sound</text>
+
+  <rect x="720" y="235" width="290" height="210" class="tab"/>
+  <text x="745" y="270" class="tabTitle">3. Appearance</text>
+  <text x="745" y="305" class="item">Visual presentation only</text>
+  <text x="765" y="332" class="item">Global frame lock and reset</text>
+  <text x="765" y="357" class="item">Warning frame</text>
+  <text x="765" y="382" class="item">Timer bars</text>
+  <text x="765" y="407" class="item">Header</text>
+  <text x="745" y="435" class="note">Content is driven elsewhere</text>
+
+  <rect x="1050" y="235" width="290" height="210" class="tab"/>
+  <text x="1075" y="270" class="tabTitle">4. Addons</text>
+  <text x="1075" y="305" class="item">Optional CrateRush modules</text>
+  <text x="1095" y="332" class="item">Crate Drop Prediction</text>
+  <text x="1095" y="357" class="item">Bounty</text>
+  <text x="1095" y="382" class="item">Queue</text>
+  <text x="1095" y="407" class="item">Enemy Presence</text>
+  <text x="1075" y="435" class="note">Details decided during implementation</text>
+
+  <!-- Row 2 -->
+  <rect x="60" y="490" width="290" height="190" class="tab"/>
+  <text x="85" y="525" class="tabTitle">5. Integrations</text>
+  <text x="85" y="560" class="item">External addon connections</text>
+  <text x="105" y="590" class="item">Hated Crate Tracker</text>
+  <text x="105" y="615" class="item">Receive data</text>
+  <text x="105" y="640" class="item">Send data</text>
+  <text x="85" y="665" class="note">Exact protocol to be verified</text>
+
+  <rect x="390" y="490" width="290" height="190" class="tab"/>
+  <text x="415" y="525" class="tabTitle">6. Advanced</text>
+  <text x="415" y="560" class="item">Expert detection tuning</text>
+  <text x="435" y="590" class="item">Shard detection</text>
+  <text x="435" y="615" class="item">Plane detection</text>
+  <text x="435" y="640" class="item">Lifecycle guardian</text>
+  <text x="435" y="665" class="item">Timer and prediction engines</text>
+
+  <rect x="720" y="490" width="290" height="190" class="tab"/>
+  <text x="745" y="525" class="tabTitle">7. About</text>
+  <text x="745" y="560" class="item">Informational section</text>
+  <text x="765" y="590" class="item">Version</text>
+  <text x="765" y="615" class="item">Author</text>
+  <text x="765" y="640" class="item">License</text>
+  <text x="765" y="665" class="item">Installed modules</text>
+
+  <rect x="1050" y="490" width="290" height="190" class="open"/>
+  <text x="1075" y="525" class="tabTitle">Debug</text>
+  <text x="1075" y="560" class="item">Not part of current UI map</text>
+  <text x="1075" y="590" class="item">May exist only during development</text>
+  <text x="1075" y="620" class="item">or as hidden developer mode</text>
+  <text x="1075" y="660" class="note">Deferred decision</text>
+
+  <!-- Legend -->
+  <rect x="60" y="735" width="1280" height="150" fill="#f7f9fc" stroke="#d6deea" stroke-width="2" rx="16"/>
+  <text x="85" y="770" class="smallTitle">Open decisions to resolve during implementation</text>
+  <text x="105" y="805" class="item">Notification layout, event enablement, per event vs global sounds, sound library</text>
+  <text x="105" y="832" class="item">Header contents, addon specific settings, Hated Crate Tracker protocol details</text>
+  <text x="105" y="859" class="item">Advanced setting boundaries, About contents, possible Debug/developer mode</text>
+
+  <text x="60" y="935" class="note">Rule: User facing UI stays user logical. Code may still map to services, modules, routers, adapters and constants internally.</text>
+</svg>

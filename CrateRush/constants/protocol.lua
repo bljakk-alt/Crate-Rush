@@ -1,0 +1,14 @@
+-- CrateRush
+-- constants/protocol.lua — Wire protocol constants for addon-to-addon comms. No magic strings.
+
+local PROTO = {}
+CrateRush.PROTO = PROTO
+
+PROTO.PREFIX            = "CrateRush"
+PROTO.MSG_CRATE_SPOTTED = "CRATE_SPOTTED"
+PROTO.MSG_CRATE_LANDED  = "CRATE_LANDED"
+PROTO.MSG_CRATE_CLAIMED = "CRATE_CLAIMED"
+PROTO.MSG_PLANE_SEEN    = "PLANE_SEEN"
+PROTO.MSG_SYNC_REQUEST  = "SYNC_REQUEST"
+PROTO.MSG_SYNC_RESPONSE = "SYNC_RESPONSE"
+PROTO.MSG_VERSION       = "VERSION"

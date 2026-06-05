@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1700" height="1050" viewBox="0 0 1700 1050">
+  <defs>
+    <style>
+      .title { font: 700 38px Arial, sans-serif; fill: #111827; }
+      .subtitle { font: 18px Arial, sans-serif; fill: #374151; }
+      .laneTitle { font: 700 24px Arial, sans-serif; fill: #111827; }
+      .boxTitle { font: 700 18px Arial, sans-serif; fill: #111827; }
+      .boxText { font: 16px Arial, sans-serif; fill: #374151; }
+      .small { font: 14px Arial, sans-serif; fill: #4b5563; }
+      .code { font: 15px Consolas, monospace; fill: #111827; }
+      .box { fill: #ffffff; stroke: #cbd5e1; stroke-width: 2; rx: 18; }
+      .event { fill: #eff6ff; stroke: #93c5fd; stroke-width: 2; rx: 18; }
+      .life { fill: #f0fdf4; stroke: #86efac; stroke-width: 2; rx: 20; }
+      .guard { fill: #fff7ed; stroke: #fdba74; stroke-width: 2; rx: 20; }
+      .timer { fill: #f5f3ff; stroke: #c4b5fd; stroke-width: 2; rx: 20; }
+      .announce { fill: #fdf2f8; stroke: #f9a8d4; stroke-width: 2; rx: 20; }
+      .warn { fill: #fefce8; stroke: #fde047; stroke-width: 2; rx: 16; }
+      .pill { fill: #f3f4f6; stroke: #d1d5db; stroke-width: 1.5; rx: 14; }
+      .arrow { stroke: #374151; stroke-width: 2.5; fill: none; marker-end: url(#arrow); }
+      .dash { stroke: #6b7280; stroke-width: 2; stroke-dasharray: 8 8; fill: none; marker-end: url(#arrow); }
+    </style>
+    <marker id="arrow" markerWidth="14" markerHeight="14" refX="11" refY="7" orient="auto" markerUnits="strokeWidth">
+      <path d="M2,2 L12,7 L2,12 z" fill="#374151"/>
+    </marker>
+  </defs>
+
+  <text x="70" y="60" class="title">Crate Timer Guardian Logic</text>
+  <text x="70" y="92" class="subtitle">System interaction diagram, events enter once, four separate systems make their own decisions.</text>
+
+  <rect x="70" y="125" width="1560" height="132" class="event"/>
+  <text x="105" y="165" class="laneTitle">Event intake</text>
+  <text x="105" y="195" class="boxText">Resolve zoneID, shardID, source and observed state.</text>
+  <text x="670" y="165" class="boxTitle">Flying rule</text>
+  <text x="670" y="195" class="boxText">FLYING requires 3 confirmations before it may create DETECTED.</text>
+  <text x="1190" y="165" class="boxTitle">Strong object rule</text>
+  <text x="1190" y="195" class="boxText">DROPPING, LANDED and CLAIMED do not need 3 confirmations.</text>
+  <text x="105" y="226" class="small">Zone transition guard: a crate GUID or context key cannot migrate zones; previous-zone shard evidence must confirm before lifecycle/timer state.</text>
+  <text x="105" y="248" class="small">Lifecycle/timer success requires the shard to be confirmed at scan start; confirmation and success cannot happen in the same scan.</text>
+
+  <rect x="70" y="305" width="360" height="600" class="life"/>
+  <text x="105" y="345" class="laneTitle">1. Crate Lifecycle</text>
+  <text x="105" y="382" class="code">key = zoneID + shardID</text>
+  <rect x="105" y="420" width="290" height="90" class="box"/>
+  <text x="130" y="452" class="boxTitle">Identity</text>
+  <text x="130" y="482" class="boxText">zoneID is the bucket.</text>
+  <text x="130" y="508" class="boxText">New shard replaces old lifecycle.</text>
+  <rect x="105" y="545" width="290" height="125" class="box"/>
+  <text x="130" y="577" class="boxTitle">States</text>
+  <text x="130" y="607" class="code">IDLE, DETECTED,</text>
+  <text x="130" y="632" class="code">DROPPING, LANDED,</text>
+  <text x="130" y="657" class="code">CLAIMED_BY_*</text>
+  <rect x="105" y="705" width="290" height="145" class="warn"/>
+  <text x="130" y="737" class="boxTitle">Mandatory DETECTED</text>
+  <text x="130" y="767" class="boxText">If first observed state is</text>
+  <text x="130" y="793" class="boxText">Dropping, Landed or Claimed,</text>
+  <text x="130" y="819" class="boxText">create DETECTED first.</text>
+
+  <rect x="480" y="305" width="340" height="600" class="guard"/>
+  <text x="515" y="345" class="laneTitle">2. Guardian</text>
+  <text x="515" y="382" class="code">key = zoneID + shardID</text>
+  <rect x="515" y="420" width="270" height="120" class="box"/>
+  <text x="540" y="452" class="boxTitle">Purpose</text>
+  <text x="540" y="482" class="boxText">Prevent false or duplicate</text>
+  <text x="540" y="508" class="boxText">lifecycle starts/resets.</text>
+  <rect x="515" y="575" width="270" height="120" class="box"/>
+  <text x="540" y="607" class="boxTitle">Starts with DETECTED</text>
+  <text x="540" y="637" class="boxText">Accepted DETECTED resets</text>
+  <text x="540" y="663" class="boxText">900 second guardian.</text>
+  <rect x="515" y="730" width="270" height="120" class="box"/>
+  <text x="540" y="762" class="boxTitle">Shard scope</text>
+  <text x="540" y="792" class="boxText">Old shard guardian must not</text>
+  <text x="540" y="818" class="boxText">block a new shard.</text>
+
+  <rect x="870" y="305" width="430" height="600" class="timer"/>
+  <text x="905" y="345" class="laneTitle">3. Timer Lifecycle</text>
+  <text x="905" y="382" class="code">key = zoneID + shardID</text>
+  <text x="905" y="410" class="small">One visible timer per zoneID.</text>
+  <rect x="905" y="445" width="360" height="95" class="warn"/>
+  <text x="930" y="477" class="boxTitle">Monster Say</text>
+  <text x="930" y="507" class="boxText">Absolute truth. Always replaces timer.</text>
+  <rect x="905" y="575" width="360" height="145" class="box"/>
+  <text x="930" y="607" class="boxTitle">Non-monster events</text>
+  <text x="930" y="637" class="boxText">No event priority.</text>
+  <text x="930" y="663" class="boxText">May correct only if candidate is before</text>
+  <text x="930" y="689" class="boxText">pending rollover and cycle is guardian-aged.</text>
+  <rect x="905" y="755" width="360" height="95" class="box"/>
+  <text x="930" y="787" class="boxTitle">Rollover</text>
+  <text x="930" y="817" class="code">next = previousExpected + duration</text>
+
+  <rect x="1350" y="305" width="280" height="600" class="announce"/>
+  <text x="1385" y="345" class="laneTitle">4. Announcements</text>
+  <rect x="1385" y="420" width="210" height="105" class="box"/>
+  <text x="1410" y="452" class="boxTitle">Driven by states</text>
+  <text x="1410" y="482" class="boxText">Not by timers.</text>
+  <rect x="1385" y="570" width="210" height="170" class="box"/>
+  <text x="1410" y="602" class="code">DETECTED</text>
+  <text x="1410" y="627" class="small">Detected Flying</text>
+  <text x="1410" y="662" class="code">DROPPING</text>
+  <text x="1410" y="687" class="small">Falling</text>
+  <text x="1410" y="722" class="code">LANDED</text>
+  <text x="1410" y="747" class="small">Landed</text>
+  <rect x="1385" y="785" width="210" height="70" class="box"/>
+  <text x="1410" y="817" class="boxTitle">Once per state</text>
+  <text x="1410" y="842" class="small">No duplicate spam.</text>
+
+  <path d="M250 257 L250 305" class="arrow"/>
+  <path d="M650 257 L650 305" class="arrow"/>
+  <path d="M1085 257 L1085 305" class="arrow"/>
+  <path d="M1490 257 L1490 305" class="arrow"/>
+
+  <path d="M430 780 C455 780 455 635 480 635" class="dash"/>
+  <path d="M820 635 C845 635 845 635 870 635" class="dash"/>
+  <path d="M1300 660 C1325 660 1325 660 1350 660" class="dash"/>
+
+  <rect x="70" y="945" width="1560" height="65" class="pill"/>
+  <text x="100" y="975" class="boxTitle">Core rule</text>
+  <text x="245" y="975" class="boxText">Monster Say always wins. Non-monster events have no priority; they help only if they improve the current prediction before pending rollover.</text>
+</svg>

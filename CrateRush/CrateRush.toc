@@ -1,0 +1,92 @@
+## Interface: 120005
+## Title: CrateRush
+## Notes: War Mode crate tracker — spot the plane, beat the enemy to the drop.
+## Author: bljakk
+## Version: 0.1.0
+## OptionalDeps: Ace3
+## SavedVariables: CrateRushDB
+## DefaultState: enabled
+## IconTexture: Interface/AddOns/CrateRush/media/icon
+## X-Category: PvP, WarMode, Tracking
+## X-License: All Rights Reserved
+## X-Curse-Project-ID: 1564954
+
+# --- Libs ---
+Libs/LibStub/LibStub.lua
+Libs/CallbackHandler-1.0/CallbackHandler-1.0.lua
+Libs/AceLocale-3.0/AceLocale-3.0.lua
+Libs/AceComm-3.0/AceComm-3.0.lua
+Libs/AceSerializer-3.0/AceSerializer-3.0.lua
+Libs/LibDeflate/LibDeflate.lua
+
+# --- Bootstrap ---
+main.lua
+
+# --- Debug (remove for release) ---
+debug.lua
+
+# --- Locale ---
+locale/locale.lua
+locale/enUS.lua
+locale/deDE.lua
+locale/esES.lua
+locale/frFR.lua
+locale/ruRU.lua
+
+# --- Constants ---
+constants/events.lua
+constants/messages.lua
+constants/protocol.lua
+constants/timing.lua
+constants/crate.lua
+
+# --- Game Data ---
+gamedata/expansions.lua
+gamedata/zones.lua
+
+# --- Data ---
+data/db.lua
+data/shards.lua
+
+# --- Config ---
+config.lua
+
+# --- Logic ---
+logic/domainEvents.lua
+logic/domainState.lua
+logic/zoneResolver.lua
+logic/vignetteScanner.lua
+logic/timerPolicy.lua
+logic/shardService.lua
+logic/crateLifecycle.lua
+logic/transitionGuard.lua
+logic/monsterSayService.lua
+logic/crateHandler/shardmap.lua
+logic/crateHandler/crateHandler.lua
+logic/crateHandler/prediction.lua
+logic/crateHandler/map.lua
+logic/announcements/templates.lua
+logic/announcements/router.lua
+logic/announcements/sinks/debug.lua
+logic/announcements/sinks/defaultChatFrame.lua
+logic/announcements/sinks/warningFrame.lua
+logic/announcements/sinks/partyRaid.lua
+logic/announcements/sinks/addonComm.lua
+logic/announce.lua
+logic/timers.lua
+logic/domainStateDiagnostics.lua
+
+# --- Comms ---
+comms.lua
+
+# --- Events ---
+events.lua
+
+# --- UI ---
+ui/frames.lua
+ui/timerbars.lua
+ui/warningframe.lua
+
+# --- Integrations ---
+integrations/hatedCrateTracker.lua
+integrations/queue.lua

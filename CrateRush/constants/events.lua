@@ -1,0 +1,24 @@
+-- CrateRush
+-- constants/events.lua — WoW event name constants. No magic strings in event registration.
+
+local EVT = {}
+CrateRush.EVT = EVT
+
+EVT.PLAYER_ENTERING_WORLD = "PLAYER_ENTERING_WORLD"
+EVT.ZONE_CHANGED_NEW_AREA = "ZONE_CHANGED_NEW_AREA"
+EVT.VIGNETTES_UPDATED     = "VIGNETTES_UPDATED"
+EVT.GROUP_ROSTER_UPDATE   = "GROUP_ROSTER_UPDATE"
+EVT.CHAT_MSG_MONSTER_SAY  = "CHAT_MSG_MONSTER_SAY"
+
+local DOMAIN_EVENT = {}
+CrateRush.DOMAIN_EVENT = DOMAIN_EVENT
+
+DOMAIN_EVENT.ZONE_SHARD_STATUS_CHANGED = "zoneShardStatusChanged"
+DOMAIN_EVENT.CURRENT_ZONE_SHARD_CHANGED = "currentZoneShardChanged"
+DOMAIN_EVENT.CRATE_STATE_CHANGED        = "crateStateChanged"
+DOMAIN_EVENT.CRATE_SIGHTING_SEEN        = "crateSightingSeen"
+DOMAIN_EVENT.ACTIVE_TIMER_CHANGED       = "activeTimerChanged"
+DOMAIN_EVENT.ACTIVE_TIMER_REMOVED       = "activeTimerRemoved"
+DOMAIN_EVENT.TIMER_REMOVAL_REQUESTED    = "timerRemovalRequested"
+DOMAIN_EVENT.SYNC_REQUESTED             = "syncRequested"
+DOMAIN_EVENT.NOTIFICATION_REQUESTED     = "notificationRequested"
