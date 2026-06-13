@@ -7,6 +7,7 @@ local MIN_FONT_SIZE     = 8
 local MAX_FONT_SIZE     = 20
 local DEFAULT_FONT_SIZE = 11
 local MAX_LINES         = 4000
+local MAX_SAVED_LINES   = 100000
 local WINDOW_WIDTH      = 700
 local WINDOW_HEIGHT     = 400
 local BOTTOM_FOLLOW_THRESHOLD = 2
@@ -39,8 +40,11 @@ local function getPreciseTime()
     if GetTimePreciseSec then
         return GetTimePreciseSec()
     end
-    if GetTime then
-        return GetTime()
+    if debugprofilestop then
+        return debugprofilestop() / 1000
+    end
+    if CrateRush.clock and CrateRush.clock.serverTime then
+        return CrateRush.clock:serverTime()
     end
     return 0
 end
@@ -49,7 +53,8 @@ local function getTimestamp()
     local preciseNow = getPreciseTime()
 
     if not timestampOffset then
-        timestampOffset = (time and time() or 0) - preciseNow
+        local serverNow = CrateRush.clock and CrateRush.clock.serverTime and CrateRush.clock:serverTime() or 0
+        timestampOffset = serverNow - preciseNow
     end
 
     local wallNow = timestampOffset + preciseNow
@@ -390,6 +395,8 @@ function debug:applyFilters(idTable)
 end
 
 function debug:log(msg)
+    return
+
     if msg == nil then return end
     msg = tostring(msg)
 
@@ -401,6 +408,20 @@ function debug:log(msg)
     local timestamp = getTimestamp()
     local colored = applyColor(msg)
     local line = "[" .. timestamp .. "] " .. colored
+
+    -- Persist the same debug line that appears in the debug window.
+    -- Keep the window behaviour unchanged, this only adds SavedVariables history.
+    CrateRushDebugDB = CrateRushDebugDB or {}
+    table.insert(CrateRushDebugDB, {
+        epoch = CrateRush.clock and CrateRush.clock:serverTime() or nil,
+        uptime = getPreciseTime(),
+        timestamp = timestamp,
+        line = msg,
+        displayLine = line,
+    })
+    if #CrateRushDebugDB > MAX_SAVED_LINES then
+        table.remove(CrateRushDebugDB, 1)
+    end
 
     table.insert(lines, line)
     if #lines > MAX_LINES then

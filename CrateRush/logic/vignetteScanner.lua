@@ -6,6 +6,49 @@ CrateRush.vignetteScanner = vignetteScanner
 
 local VIGNETTE_TYPE = CrateRush.VIGNETTE_TYPE
 local seenGUIDs = {}
+local seenGUIDCount = 0
+
+local SEEN_GUID_MAX_AGE_SECONDS = CrateRush.TIMING.VIGNETTE_SEEN_CACHE_MAX_AGE_SECONDS
+local SEEN_GUID_MAX_ENTRIES = CrateRush.TIMING.VIGNETTE_SEEN_CACHE_MAX_ENTRIES
+
+local function nowSeconds()
+    return CrateRush.clock and CrateRush.clock.serverTime and CrateRush.clock:serverTime() or 0
+end
+
+local function pruneSeenGUIDs(now)
+    now = now or nowSeconds()
+
+    local expired = {}
+    for guid, entry in pairs(seenGUIDs) do
+        local seenAt = entry and entry.seenAt or 0
+        if now - seenAt > SEEN_GUID_MAX_AGE_SECONDS then
+            expired[#expired + 1] = guid
+        end
+    end
+
+    for _, guid in ipairs(expired) do
+        if seenGUIDs[guid] then
+            seenGUIDs[guid] = nil
+            seenGUIDCount = math.max(0, seenGUIDCount - 1)
+        end
+    end
+
+    while seenGUIDCount > SEEN_GUID_MAX_ENTRIES do
+        local oldestGUID = nil
+        local oldestSeenAt = nil
+        for guid, entry in pairs(seenGUIDs) do
+            local seenAt = entry and entry.seenAt or 0
+            if not oldestSeenAt or seenAt < oldestSeenAt then
+                oldestGUID = guid
+                oldestSeenAt = seenAt
+            end
+        end
+
+        if not oldestGUID then return end
+        seenGUIDs[oldestGUID] = nil
+        seenGUIDCount = math.max(0, seenGUIDCount - 1)
+    end
+end
 
 local function extractShardFromGUID(guid)
     if not guid or type(guid) ~= "string" then return nil end
@@ -31,12 +74,15 @@ end
 
 function vignetteScanner:markSeen(guid)
     if not guid then return false end
+    pruneSeenGUIDs()
     if seenGUIDs[guid] then return false end
-    seenGUIDs[guid] = true
+    seenGUIDs[guid] = { seenAt = nowSeconds() }
+    seenGUIDCount = seenGUIDCount + 1
     return true
 end
 
 function vignetteScanner:wasSeen(guid)
+    pruneSeenGUIDs()
     return guid and seenGUIDs[guid] or false
 end
 

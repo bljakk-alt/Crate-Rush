@@ -15,11 +15,6 @@ local function log(msg)
     end
 end
 
-local function makeKey(zoneID, shardID)
-    if not zoneID or not shardID then return nil end
-    return tostring(zoneID) .. ":" .. tostring(shardID)
-end
-
 local function stringify(value)
     if value == nil then return "nil" end
     return tostring(value)

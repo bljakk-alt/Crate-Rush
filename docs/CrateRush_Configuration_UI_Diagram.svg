@@ -31,7 +31,7 @@
   <text x="105" y="357" class="item">Always enable CrateRush</text>
   <text x="125" y="382" class="item">Warn me when War Mode is off</text>
   <text x="105" y="407" class="item">Disable CrateRush</text>
-  <text x="85" y="432" class="item">Show minimap button</text>
+  <text x="85" y="432" class="item">Runtime options</text>
 
   <rect x="390" y="235" width="290" height="210" class="tab"/>
   <text x="415" y="270" class="tabTitle">2. Notifications</text>

@@ -8,6 +8,7 @@ local CRATE_SOURCE = CrateRush.CRATE_SOURCE
 local SCAN_TRIGGER = CrateRush.SCAN_TRIGGER
 local SHARD_STATUS = CrateRush.SHARD_STATUS
 local VIGNETTE_TYPE = CrateRush.VIGNETTE_TYPE
+local crateKeys = CrateRush.crateKeys
 
 local zoneConfirm = {}
 local scanFunc = nil
@@ -35,12 +36,7 @@ local function zoneLog(msg)
 end
 
 local function nowSeconds()
-    return GetTime and GetTime() or 0
-end
-
-local function sameShard(a, b)
-    if a == nil or b == nil then return false end
-    return tostring(a) == tostring(b)
+    return CrateRush.clock and CrateRush.clock.serverTime and CrateRush.clock:serverTime() or 0
 end
 
 local function resolveCrateZoneID(zoneID)
@@ -123,13 +119,27 @@ local function publishZoneShardStatus(zoneID, shardID, status)
         status   = status or SHARD_STATUS.UNKNOWN,
     })
 end
+local function publishZoneShardChanged(zoneID, oldShardID, newShardID, source)
+    if not CrateRush.domainEvents or not CrateRush.domainEvents.publish then return end
+    if not CrateRush.DOMAIN_EVENT or not CrateRush.DOMAIN_EVENT.ZONE_SHARD_CHANGED then return end
+
+    local crateZoneID = resolveCrateZoneID(zoneID)
+    CrateRush.domainEvents:publish(CrateRush.DOMAIN_EVENT.ZONE_SHARD_CHANGED, {
+        zoneID     = crateZoneID,
+        zoneName   = CrateRush.zoneResolver and CrateRush.zoneResolver:getCrateZoneName(crateZoneID) or tostring(crateZoneID),
+        oldShardID = oldShardID,
+        newShardID = newShardID,
+        shardID    = newShardID,
+        source     = source or "zone_shard_mismatch",
+    })
+end
 
 local function recordZoneShard(zoneID, shardID, source)
     zoneID = resolveCrateZoneID(zoneID)
     if not zoneID or not shardID then return end
 
     if CrateRush.storage and CrateRush.storage.recordZoneShard then
-        CrateRush.storage:recordZoneShard(zoneID, shardID, GetServerTime and GetServerTime() or nowSeconds(), source)
+        CrateRush.storage:recordZoneShard(zoneID, shardID, nowSeconds(), source)
     end
 end
 
@@ -140,8 +150,7 @@ end
 function shardService:isCrateObjectEvidence(vignetteType)
     return vignetteType == VIGNETTE_TYPE.CRATE_DROPPING
         or vignetteType == VIGNETTE_TYPE.CRATE_LANDED
-        or vignetteType == VIGNETTE_TYPE.CRATE_CLAIMED_BY_ALLIANCE
-        or vignetteType == VIGNETTE_TYPE.CRATE_CLAIMED_BY_HORDE
+        or CrateRush.isCrateVignetteClaimed(vignetteType)
 end
 
 function shardService:canUseSightingForZoneShard(zoneID, sighting)
@@ -153,7 +162,7 @@ end
 function shardService:isPreviousZoneShard(zoneID, shardID)
     return zoneShardCheck.previousZoneID
         and zoneShardCheck.previousZoneID ~= zoneID
-        and sameShard(zoneShardCheck.previousShardID, shardID)
+        and crateKeys:sameShard(zoneShardCheck.previousShardID, shardID)
 end
 
 function shardService:isPreviousZoneShardPending(zoneID, shardID)
@@ -164,10 +173,10 @@ end
 function shardService:isShardConfirmedForZone(zoneID, shardID)
     zoneID = resolveCrateZoneID(zoneID)
     if not zoneID or not shardID then return false end
-    if zoneShardCheck.zoneID == zoneID and sameShard(zoneShardCheck.confirmedShardID, shardID) then
+    if zoneShardCheck.zoneID == zoneID and crateKeys:sameShard(zoneShardCheck.confirmedShardID, shardID) then
         return true
     end
-    return sameShard(self:getConfirmedShard(zoneID), shardID)
+    return crateKeys:sameShard(self:getConfirmedShard(zoneID), shardID)
 end
 
 function shardService:getConfirmedShardAtScanStart(zoneID)
@@ -204,7 +213,7 @@ local function getRequiredShardConfirmCount(self, zoneID, shardID)
 end
 
 local function canFastAcceptStoredMatch(self, zoneID, shardID, vignetteType)
-    if not zoneShardCheck.expectedShardID or not sameShard(zoneShardCheck.expectedShardID, shardID) then
+    if not zoneShardCheck.expectedShardID or not crateKeys:sameShard(zoneShardCheck.expectedShardID, shardID) then
         return false
     end
     if self:isPreviousZoneShard(zoneID, shardID) then
@@ -228,8 +237,8 @@ function shardService:processShardEvidence(zoneID, shardID, vignetteType, trigge
     local fastAcceptedStoredMatch = false
     if zoneShardCheck.zoneID == zoneID
         and zoneShardCheck.expectedShardID
-        and sameShard(zoneShardCheck.expectedShardID, shardID)
-        and not sameShard(zoneShardCheck.confirmedShardID, shardID)
+        and crateKeys:sameShard(zoneShardCheck.expectedShardID, shardID)
+        and not crateKeys:sameShard(zoneShardCheck.confirmedShardID, shardID)
         and canFastAcceptStoredMatch(self, zoneID, shardID, vignetteType)
     then
         zoneLog("STORED_MATCH_SEEN token=" .. tostring(zoneShardCheck.token)
@@ -248,7 +257,7 @@ function shardService:processShardEvidence(zoneID, shardID, vignetteType, trigge
     self:confirmShard(zoneID, shardID, trigger, scanID, requiredCount)
     local confirmedShardID = self:getConfirmedShard(zoneID)
 
-    if confirmedShardID and not sameShard(previousConfirmedShardID, confirmedShardID) then
+    if confirmedShardID and not crateKeys:sameShard(previousConfirmedShardID, confirmedShardID) then
         self:applyConfirmedZoneShard(zoneID, confirmedShardID)
         return true
     end
@@ -282,9 +291,9 @@ function shardService:confirmShard(zoneID, shardID, source, sampleKey, requiredC
     source = source or CRATE_SOURCE.UNKNOWN
 
     if c.confirmed then
-        if sameShard(c.shardID, shardID) then return false end
+        if crateKeys:sameShard(c.shardID, shardID) then return false end
 
-        if sameShard(c.candidateShardID, shardID) then
+        if crateKeys:sameShard(c.candidateShardID, shardID) then
             if sampleKey and c.candidateLastSampleKey == sampleKey then
                 return false
             end
@@ -317,7 +326,7 @@ function shardService:confirmShard(zoneID, shardID, source, sampleKey, requiredC
         return false
     end
 
-    if sameShard(c.shardID, shardID) then
+    if crateKeys:sameShard(c.shardID, shardID) then
         if sampleKey and c.lastSampleKey == sampleKey then
             return false
         end
@@ -382,7 +391,7 @@ function shardService:acceptConfirmedShard(zoneID, shardID, source)
         zoneConfirm[zoneID] = c
     end
 
-    if c.confirmed and sameShard(c.shardID, shardID) then
+    if c.confirmed and crateKeys:sameShard(c.shardID, shardID) then
         return false
     end
 
@@ -576,7 +585,7 @@ function shardService:finalizeZoneShardMismatch(token)
 
     zoneShardCheck.graceStarted = false
 
-    if sameShard(expectedShardID, confirmedShardID) then
+    if crateKeys:sameShard(expectedShardID, confirmedShardID) then
         zoneLog("MATCH_AFTER_GRACE token=" .. tostring(token)
             .. " zone=" .. tostring(zoneID)
             .. " shard=" .. tostring(confirmedShardID)
@@ -592,6 +601,7 @@ function shardService:finalizeZoneShardMismatch(token)
         .. " current=" .. tostring(confirmedShardID)
         .. " -> red")
 
+    publishZoneShardChanged(zoneID, expectedShardID, confirmedShardID, "mismatch_final")
     if CrateRush.onZoneShardChanged then
         CrateRush.onZoneShardChanged(zoneID, expectedShardID, confirmedShardID)
     end
@@ -630,7 +640,7 @@ function shardService:applyConfirmedZoneShard(zoneID, shardID)
         return
     end
 
-    if sameShard(expectedShardID, shardID) then
+    if crateKeys:sameShard(expectedShardID, shardID) then
         zoneShardCheck.token = zoneShardCheck.token + 1
         zoneShardCheck.graceStarted = false
         zoneLog("MATCH token=" .. tostring(zoneShardCheck.token)

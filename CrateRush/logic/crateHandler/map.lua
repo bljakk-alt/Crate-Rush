@@ -20,7 +20,7 @@ local function getMapPinLabel()
     return _G.MAP_PIN_LOCATION or _G.MAP_PIN or "Map Pin Location"
 end
 
-local function getOfficialWaypointLink(zoneID, x, y)
+local function setUserWaypointAndGetHyperlink(zoneID, x, y)
     if not C_Map or not C_Map.SetUserWaypoint or not C_Map.GetUserWaypointHyperlink then return nil end
     if not UiMapPoint or not UiMapPoint.CreateFromCoordinates then return nil end
 
@@ -33,7 +33,6 @@ local function getOfficialWaypointLink(zoneID, x, y)
     local okSet = pcall(C_Map.SetUserWaypoint, point)
     if not okSet then return nil end
 
-    -- Keep the waypoint active; the announcement should also mark the player's map.
     local okLink, link = pcall(C_Map.GetUserWaypointHyperlink)
 
     if okLink and type(link) == "string" and link ~= "" then
@@ -42,7 +41,7 @@ local function getOfficialWaypointLink(zoneID, x, y)
     return nil
 end
 
-local function getFallbackWaypointLink(zoneID, x, y)
+local function formatFallbackWaypointLink(zoneID, x, y)
     local mapID = tonumber(zoneID)
     if not mapID then return nil end
 
@@ -57,15 +56,16 @@ local function getFallbackWaypointLink(zoneID, x, y)
     )
 end
 
-function map:getMapPinLocation(zoneID, x, y)
+function map:setWaypointAndCreateLink(zoneID, x, y)
     if not zoneID then return nil end
 
     local mapX = normalizeMapCoordinate(x)
     local mapY = normalizeMapCoordinate(y)
     if not mapX or not mapY then return nil end
 
-    return getOfficialWaypointLink(zoneID, mapX, mapY)
-        or getFallbackWaypointLink(zoneID, mapX, mapY)
+    -- Side effect: keep the waypoint active so local chat output also marks the player's map.
+    return setUserWaypointAndGetHyperlink(zoneID, mapX, mapY)
+        or formatFallbackWaypointLink(zoneID, mapX, mapY)
 end
 
 function map:addPin(zoneID, x, y, label)

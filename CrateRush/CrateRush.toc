@@ -1,10 +1,10 @@
 ## Interface: 120005
-## Title: CrateRush
-## Notes: War Mode crate tracker — spot the plane, beat the enemy to the drop.
+## Title: Crate Rush
+## Notes: War Mode crate tracker â€” spot the plane, beat the enemy to the drop.
 ## Author: bljakk
-## Version: 0.1.0
+## Version: 0.9.0
 ## OptionalDeps: Ace3
-## SavedVariables: CrateRushDB
+## SavedVariables: CrateRushDB, CrateRushDebugDB
 ## DefaultState: enabled
 ## IconTexture: Interface/AddOns/CrateRush/media/icon
 ## X-Category: PvP, WarMode, Tracking
@@ -15,12 +15,16 @@
 Libs/LibStub/LibStub.lua
 Libs/CallbackHandler-1.0/CallbackHandler-1.0.lua
 Libs/AceLocale-3.0/AceLocale-3.0.lua
+Libs/AceComm-3.0/ChatThrottleLib.lua
 Libs/AceComm-3.0/AceComm-3.0.lua
 Libs/AceSerializer-3.0/AceSerializer-3.0.lua
 Libs/LibDeflate/LibDeflate.lua
 
 # --- Bootstrap ---
 main.lua
+
+# --- Utils ---
+utils/clock.lua
 
 # --- Debug (remove for release) ---
 debug.lua
@@ -38,15 +42,18 @@ constants/events.lua
 constants/messages.lua
 constants/protocol.lua
 constants/timing.lua
+constants/factions.lua
 constants/crate.lua
+constants/keys.lua
 
 # --- Game Data ---
-gamedata/expansions.lua
 gamedata/zones.lua
+gamedata/expansions.lua
+gamedata/prediction.lua
+gamedata/routeMetadata.lua
 
 # --- Data ---
 data/db.lua
-data/shards.lua
 
 # --- Config ---
 config.lua
@@ -54,17 +61,20 @@ config.lua
 # --- Logic ---
 logic/domainEvents.lua
 logic/domainState.lua
+logic/playerContext.lua
 logic/zoneResolver.lua
 logic/vignetteScanner.lua
 logic/timerPolicy.lua
 logic/shardService.lua
+logic/routeData.lua
 logic/crateLifecycle.lua
 logic/transitionGuard.lua
-logic/monsterSayService.lua
+logic/crateCycleAnchorService.lua
+logic/prediction.lua
 logic/crateHandler/shardmap.lua
 logic/crateHandler/crateHandler.lua
-logic/crateHandler/prediction.lua
 logic/crateHandler/map.lua
+logic/announcements/messageConfig.lua
 logic/announcements/templates.lua
 logic/announcements/router.lua
 logic/announcements/sinks/debug.lua
@@ -72,21 +82,38 @@ logic/announcements/sinks/defaultChatFrame.lua
 logic/announcements/sinks/warningFrame.lua
 logic/announcements/sinks/partyRaid.lua
 logic/announcements/sinks/addonComm.lua
+logic/announcements/manual.lua
+logic/announcements/manualService.lua
 logic/announce.lua
+logic/predictionAnnounce.lua
+logic/announcements/timerSoon.lua
+logic/announcements/shardChanged.lua
 logic/timers.lua
 logic/domainStateDiagnostics.lua
 
 # --- Comms ---
 comms.lua
+logic/syncDisplay.lua
+logic/cockpitDisplay.lua
 
 # --- Events ---
 events.lua
 
 # --- UI ---
+ui/theme.lua
+ui/controlAtlas.lua
+ui/layout.lua
+ui/rounded.lua
+ui/surface.lua
+ui/model.lua
+ui/actions.lua
+ui/configDialog.lua
+ui/cockpit.lua
 ui/frames.lua
 ui/timerbars.lua
 ui/warningframe.lua
 
 # --- Integrations ---
 integrations/hatedCrateTracker.lua
+integrations/enemyPresence.lua
 integrations/queue.lua

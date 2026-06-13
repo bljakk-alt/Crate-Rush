@@ -1,0 +1,231 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1800" height="1200" viewBox="0 0 1800 1200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#07121d"/>
+      <stop offset="100%" stop-color="#02070d"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.35"/>
+    </filter>
+    <style>
+      .title { font: 700 44px Inter, Arial, sans-serif; fill: #e9f2ff; }
+      .subtitle { font: 500 18px Inter, Arial, sans-serif; fill: #8A93A3; }
+      .section { font: 700 22px Inter, Arial, sans-serif; fill: #2fd6ff; }
+      .body { font: 500 18px Inter, Arial, sans-serif; fill: #dfe8f4; }
+      .small { font: 500 16px Inter, Arial, sans-serif; fill: #B8C0CC; }
+      .tiny { font: 500 13px Inter, Arial, sans-serif; fill: #8A93A3; }
+      .label { font: 700 20px Inter, Arial, sans-serif; fill: #EAF3FF; }
+      .calloutH { font: 700 22px Inter, Arial, sans-serif; }
+      .calloutB { font: 500 18px Inter, Arial, sans-serif; fill: #DCE5F1; }
+      .mono { font: 700 18px ui-monospace, SFMono-Regular, Consolas, monospace; fill: #ffffff; }
+    </style>
+  </defs>
+
+  <rect x="0" y="0" width="1800" height="1200" fill="url(#bg)"/>
+
+  <!-- Main UI -->
+  <g filter="url(#shadow)">
+    <rect x="180" y="80" rx="18" ry="18" width="1340" height="980" fill="#050b12" fill-opacity="0.78" stroke="#243040"/>
+    <rect x="180" y="80" rx="18" ry="18" width="1340" height="150" fill="#061019" fill-opacity="0.92" stroke="#243040"/>
+    <line x1="180" y1="230" x2="1520" y2="230" stroke="#243040"/>
+
+    <!-- Header -->
+    <text x="250" y="165" class="title" fill="#22D9FF">Eversong Woods</text>
+    <rect x="1090" y="112" width="260" height="56" rx="14" fill="#0d1e10" stroke="#1f6d2a"/>
+    <circle cx="1122" cy="140" r="9" fill="#38D64A"/>
+    <text x="1143" y="148" class="body" fill="#38D64A">Shard 11170 • Confirmed</text>
+    <rect x="1445" y="105" width="58" height="58" rx="12" fill="#08131e" stroke="#243040"/>
+    <rect x="1375" y="105" width="58" height="58" rx="12" fill="#08131e" stroke="#243040"/>
+    <text x="1392" y="146" class="title" style="font-size:30px">⚙</text>
+    <text x="1464" y="146" class="title" style="font-size:30px">×</text>
+
+    <!-- Left panel rows -->
+    <g id="left-panel">
+      <rect x="215" y="260" width="720" height="140" rx="12" fill="#08131e" fill-opacity="0.95" stroke="#243040"/>
+      <rect x="215" y="425" width="720" height="140" rx="12" fill="#08131e" fill-opacity="0.95" stroke="#243040"/>
+      <rect x="215" y="590" width="720" height="140" rx="12" fill="#08131e" fill-opacity="0.95" stroke="#243040"/>
+      <rect x="215" y="755" width="720" height="140" rx="12" fill="#08131e" fill-opacity="0.95" stroke="#22D9FF" stroke-width="2"/>
+      <rect x="215" y="920" width="720" height="140" rx="12" fill="#08131e" fill-opacity="0.95" stroke="#243040"/>
+
+      <!-- lifecycle strips -->
+      <rect x="229" y="285" width="6" height="90" rx="3" fill="#FF9800"/>
+      <rect x="229" y="450" width="6" height="90" rx="3" fill="#73D63B"/>
+      <rect x="229" y="615" width="6" height="90" rx="3" fill="#FF4F86"/>
+      <rect x="229" y="780" width="6" height="90" rx="3" fill="#22D9FF"/>
+      <rect x="229" y="945" width="6" height="90" rx="3" fill="#8B4DFF"/>
+
+      <!-- row labels -->
+      <text x="255" y="332" class="label">Zul'Aman [66380]</text>
+      <text x="255" y="497" class="label">Harandar [39]</text>
+      <text x="255" y="662" class="label">Slayer’s Rise [39]</text>
+      <text x="255" y="827" class="label">Eversong Woods [11170]</text>
+      <text x="255" y="992" class="label">Voidstorm [70]</text>
+
+      <!-- timer tracks and fills -->
+      <rect x="255" y="352" width="530" height="24" rx="12" fill="#2A3442" fill-opacity="0.55"/>
+      <rect x="255" y="517" width="530" height="24" rx="12" fill="#2A3442" fill-opacity="0.55"/>
+      <rect x="255" y="682" width="530" height="24" rx="12" fill="#2A3442" fill-opacity="0.55"/>
+      <rect x="255" y="847" width="530" height="24" rx="12" fill="#2A3442" fill-opacity="0.55"/>
+      <rect x="255" y="1012" width="530" height="24" rx="12" fill="#2A3442" fill-opacity="0.55"/>
+
+      <rect x="255" y="352" width="285" height="24" rx="12" fill="#FF9800"/>
+      <rect x="255" y="517" width="255" height="24" rx="12" fill="#73D63B"/>
+      <rect x="255" y="682" width="230" height="24" rx="12" fill="#FF4F86"/>
+      <rect x="255" y="847" width="310" height="24" rx="12" fill="#22D9FF"/>
+      <rect x="255" y="1012" width="270" height="24" rx="12" fill="#8B4DFF"/>
+
+      <!-- timers -->
+      <text x="815" y="345" class="title" style="font-size:28px">08:47</text>
+      <text x="815" y="510" class="title" style="font-size:28px">12:34</text>
+      <text x="815" y="675" class="title" style="font-size:28px">04:21</text>
+      <text x="815" y="840" class="title" style="font-size:28px">03:12</text>
+      <text x="815" y="1005" class="title" style="font-size:28px">11:08</text>
+    </g>
+
+    <!-- Right panel -->
+    <g id="right-panel">
+      <rect x="970" y="260" width="500" height="170" rx="12" fill="#08131e" fill-opacity="0.95" stroke="#243040"/>
+      <rect x="970" y="445" width="500" height="170" rx="12" fill="#08131e" fill-opacity="0.95" stroke="#243040"/>
+      <rect x="970" y="630" width="500" height="140" rx="12" fill="#08131e" fill-opacity="0.95" stroke="#243040"/>
+      <rect x="970" y="785" width="500" height="150" rx="12" fill="#08131e" fill-opacity="0.95" stroke="#243040"/>
+      <rect x="970" y="950" width="500" height="85" rx="12" fill="#08131e" fill-opacity="0.95" stroke="#243040"/>
+
+      <!-- Section headers with icons -->
+      <text x="995" y="305" class="section">🛡  STATE</text>
+      <text x="995" y="490" class="section">◔  TIMING</text>
+      <text x="995" y="670" class="section">⌖  PREDICTION</text>
+      <text x="995" y="825" class="section">⚔  ENEMY</text>
+
+      <!-- State -->
+      <text x="1030" y="365" class="label" style="font-size:24px">Lootable</text>
+      <text x="1415" y="365" class="label" style="font-size:24px" fill="#38D64A" text-anchor="end">03:12 left</text>
+
+      <!-- Timing -->
+      <text x="1100" y="545" class="body" style="font-size:20px">Drop</text>
+      <text x="1340" y="545" class="body" style="font-size:20px">Land</text>
+      <text x="1095" y="590" class="title" style="font-size:22px; fill:#8A93A3">--:--</text>
+      <text x="1335" y="590" class="title" style="font-size:22px; fill:#8A93A3">--:--</text>
+      <line x1="1220" y1="520" x2="1220" y2="600" stroke="#243040"/>
+
+      <!-- Prediction -->
+      <text x="1030" y="720" class="body" style="font-size:22px">46.2, 38.7</text>
+      <text x="1410" y="720" class="body" style="font-size:22px" text-anchor="end">92%</text>
+
+      <!-- Enemy -->
+      <text x="1030" y="880" class="body" style="font-size:22px">Horde</text>
+      <text x="1030" y="915" class="body" style="font-size:22px">12–16</text>
+      <line x1="1220" y1="850" x2="1220" y2="915" stroke="#243040"/>
+      <text x="1295" y="880" class="body" style="font-size:22px">Healers</text>
+      <text x="1295" y="915" class="body" style="font-size:22px">2 / 5</text>
+      <text x="1295" y="942" class="tiny">confirmed / possible</text>
+
+      <!-- Sync strip -->
+      <text x="995" y="1003" class="body" style="font-size:22px" fill="#B366FF">Player-Realm</text>
+      <text x="1420" y="1003" class="body" style="font-size:22px" text-anchor="end">Sync Active</text>
+      <circle cx="1444" cy="997" r="8" fill="#38D64A"/>
+    </g>
+  </g>
+
+  <!-- Left callouts -->
+  <g>
+    <text x="28" y="110" class="calloutH" fill="#22D9FF">ZONE LIST</text>
+    <text x="28" y="138" class="calloutB">Clean overview of all</text>
+    <text x="28" y="163" class="calloutB">crate zones with</text>
+    <text x="28" y="188" class="calloutB">time to next drop.</text>
+    <line x1="150" y1="155" x2="178" y2="155" stroke="#22D9FF" stroke-width="2"/>
+
+    <text x="28" y="270" class="calloutH" fill="#73D63B">ACTIVE (LIFECYCLE)</text>
+    <text x="28" y="300" class="calloutB">Thin coloured strip shows</text>
+    <text x="28" y="325" class="calloutB">that the crate is currently</text>
+    <text x="28" y="350" class="calloutB">in an active lifecycle state.</text>
+    <text x="28" y="375" class="calloutB">Not shown just because a</text>
+    <text x="28" y="400" class="calloutB">timer exists.</text>
+    <line x1="165" y1="340" x2="214" y2="340" stroke="#73D63B" stroke-width="2"/>
+    <circle cx="165" cy="340" r="5" fill="#73D63B"/>
+
+    <text x="28" y="520" class="calloutH" fill="#ADB6C4">ROW CONTENT</text>
+    <text x="28" y="548" class="calloutB">Zone name and shard id</text>
+    <text x="28" y="573" class="calloutB">sit above the timer bar.</text>
+    <text x="28" y="598" class="calloutB">Timer bar is thicker</text>
+    <text x="28" y="623" class="calloutB">vertically for visibility.</text>
+    <line x1="155" y1="575" x2="255" y2="575" stroke="#ADB6C4" stroke-width="2"/>
+
+    <text x="28" y="760" class="calloutH" fill="#8B4DFF">SELECTED</text>
+    <text x="28" y="788" class="calloutB">Selected row gets a</text>
+    <text x="28" y="813" class="calloutB">subtle zone coloured border.</text>
+    <line x1="145" y1="795" x2="214" y2="795" stroke="#8B4DFF" stroke-width="2"/>
+    <circle cx="145" cy="795" r="5" fill="#8B4DFF"/>
+
+    <rect x="24" y="930" width="170" height="156" rx="10" fill="#08131e" stroke="#524018"/>
+    <text x="40" y="965" class="calloutH" fill="#FFC247" style="font-size:20px">TIMER STATES</text>
+    <circle cx="46" cy="1000" r="7" fill="#FFFFFF"/>
+    <text x="62" y="1006" class="calloutB">Normal `#FFFFFF`</text>
+    <circle cx="46" cy="1036" r="7" fill="#FFC247"/>
+    <text x="62" y="1042" class="calloutB">Warning `#FFC247`</text>
+    <circle cx="46" cy="1072" r="7" fill="#FF4D4D"/>
+    <text x="62" y="1078" class="calloutB">Urgent `#FF4D4D`</text>
+  </g>
+
+  <!-- Right callouts -->
+  <g>
+    <text x="1568" y="110" class="calloutH" fill="#22D9FF">DETAIL / COCKPIT</text>
+    <text x="1568" y="138" class="calloutB">All focused info about the</text>
+    <text x="1568" y="163" class="calloutB">selected zone.</text>
+    <line x1="1500" y1="150" x2="1560" y2="150" stroke="#ffffff" stroke-width="2"/>
+
+    <text x="1568" y="260" class="calloutH" fill="#EAF3FF">SHARED HEADER</text>
+    <text x="1568" y="288" class="calloutB">Large zone title in zone colour.</text>
+    <text x="1568" y="313" class="calloutB">Shard badge binds shard id</text>
+    <text x="1568" y="338" class="calloutB">with shard state.</text>
+    <line x1="1480" y1="250" x2="1560" y2="250" stroke="#EAF3FF" stroke-width="2"/>
+
+    <text x="1568" y="445" class="calloutH" fill="#EAF3FF">STATE</text>
+    <text x="1568" y="473" class="calloutB">Lootable mode replaces the</text>
+    <text x="1568" y="498" class="calloutB">full lifecycle strip.</text>
+    <text x="1568" y="523" class="calloutB">Left aligned label, right</text>
+    <text x="1568" y="548" class="calloutB">aligned time remaining.</text>
+    <line x1="1475" y1="475" x2="1560" y2="475" stroke="#ffffff" stroke-width="2"/>
+
+    <text x="1568" y="660" class="calloutH" fill="#EAF3FF">TIMING</text>
+    <text x="1568" y="688" class="calloutB">Two columns only:</text>
+    <text x="1568" y="713" class="calloutB">Drop and Land.</text>
+    <text x="1568" y="738" class="calloutB">Past values become grey</text>
+    <text x="1568" y="763" class="calloutB">and show `--:--`.</text>
+    <line x1="1470" y1="710" x2="1560" y2="710" stroke="#ffffff" stroke-width="2"/>
+
+    <text x="1568" y="850" class="calloutH" fill="#EAF3FF">PREDICTION / ENEMY</text>
+    <text x="1568" y="878" class="calloutB">Prediction is compact:</text>
+    <text x="1568" y="903" class="calloutB">coordinates + confidence.</text>
+    <text x="1568" y="928" class="calloutB">Enemy is simplified:</text>
+    <text x="1568" y="953" class="calloutB">opposite faction total +</text>
+    <text x="1568" y="978" class="calloutB">healers confirmed / possible.</text>
+    <line x1="1470" y1="910" x2="1560" y2="910" stroke="#ffffff" stroke-width="2"/>
+
+    <text x="1568" y="1070" class="calloutH" fill="#EAF3FF">SYNC STRIP</text>
+    <text x="1568" y="1098" class="calloutB">Leader name left, status</text>
+    <text x="1568" y="1123" class="calloutB">text right, then dot on the</text>
+    <text x="1568" y="1148" class="calloutB">far right for symmetry.</text>
+    <line x1="1470" y1="1090" x2="1560" y2="1090" stroke="#ffffff" stroke-width="2"/>
+  </g>
+
+  <!-- Bottom center color swatches -->
+  <g>
+    <rect x="520" y="1085" width="760" height="86" rx="14" fill="#08131e" stroke="#243040"/>
+    <text x="540" y="1116" class="section">ZONE COLOURS</text>
+    <rect x="548" y="1132" width="22" height="22" rx="6" fill="#FF9800"/><text x="580" y="1149" class="small">Zul'Aman `#FF9800`</text>
+    <rect x="770" y="1132" width="22" height="22" rx="6" fill="#73D63B"/><text x="802" y="1149" class="small">Harandar `#73D63B`</text>
+    <rect x="1020" y="1132" width="22" height="22" rx="6" fill="#FF4F86"/><text x="1052" y="1149" class="small">Slayer’s Rise `#FF4F86`</text>
+    <rect x="548" y="1160" width="22" height="22" rx="6" fill="#22D9FF"/><text x="580" y="1177" class="small">Eversong `#22D9FF`</text>
+    <rect x="770" y="1160" width="22" height="22" rx="6" fill="#8B4DFF"/><text x="802" y="1177" class="small">Voidstorm `#8B4DFF`</text>
+  </g>
+
+  <!-- v1.1 clarification notes -->
+  <g>
+    <rect x="1180" y="1085" width="300" height="86" rx="14" fill="#08131e" stroke="#243040"/>
+    <text x="1200" y="1116" class="section">V1.1 LOCKS</text>
+    <text x="1200" y="1142" class="tiny">Right panel always has selected zone</text>
+    <text x="1200" y="1162" class="tiny">Idle state = Idle / Waiting</text>
+    <text x="1200" y="1182" class="tiny">Enemy label derives from player faction</text>
+  </g>
+
+</svg>

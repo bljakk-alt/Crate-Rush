@@ -3,7 +3,10 @@
 
 local sink = {}
 
-function sink:isEnabled()
+function sink:isEnabled(announcement)
+    if announcement and announcement.localOnly then
+        return false
+    end
     if CrateRush.config and CrateRush.config.getBoolean then
         return CrateRush.config:getBoolean("announceToAddonComm", false)
     end
@@ -11,6 +14,7 @@ function sink:isEnabled()
 end
 
 function sink:send(announcement)
+    if announcement and announcement.localOnly then return false end
     if not CrateRush.comms or not CrateRush.comms.send then return false end
 
     local ok, result = pcall(CrateRush.comms.send, CrateRush.comms, "ANNOUNCEMENT", announcement, "GROUP")

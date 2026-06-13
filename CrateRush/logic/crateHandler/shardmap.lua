@@ -59,9 +59,9 @@ function shardmap:transition(zoneID, shardID, newState, dropX, dropY, source)
     return false
 end
 
-function shardmap:onPlaneSeen(zoneID, shardID, vignetteGUID)
+function shardmap:onPlaneSeen(zoneID, shardID, vignetteGUID, x, y)
     if CrateRush.crateLifecycle and CrateRush.crateLifecycle.onPlaneSeen then
-        return CrateRush.crateLifecycle:onPlaneSeen(zoneID, shardID, vignetteGUID)
+        return CrateRush.crateLifecycle:onPlaneSeen(zoneID, shardID, vignetteGUID, x, y)
     end
     return false
 end

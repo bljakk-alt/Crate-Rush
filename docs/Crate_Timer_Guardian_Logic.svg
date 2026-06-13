@@ -37,6 +37,7 @@
   <text x="1190" y="195" class="boxText">DROPPING, LANDED and CLAIMED do not need 3 confirmations.</text>
   <text x="105" y="226" class="small">Zone transition guard: a crate GUID or context key cannot migrate zones; previous-zone shard evidence must confirm before lifecycle/timer state.</text>
   <text x="105" y="248" class="small">Lifecycle/timer success requires the shard to be confirmed at scan start; confirmation and success cannot happen in the same scan.</text>
+  <text x="670" y="226" class="small">Landed-gone rule: observed LANDED that disappears closes as CLAIMED_BY_OPPOSITE_FACTION, not as an expired/open state.</text>
 
   <rect x="70" y="305" width="360" height="600" class="life"/>
   <text x="105" y="345" class="laneTitle">1. Crate Lifecycle</text>
@@ -49,7 +50,7 @@
   <text x="130" y="577" class="boxTitle">States</text>
   <text x="130" y="607" class="code">IDLE, DETECTED,</text>
   <text x="130" y="632" class="code">DROPPING, LANDED,</text>
-  <text x="130" y="657" class="code">CLAIMED_BY_*</text>
+  <text x="130" y="657" class="code">CLAIMED_BY_MY/OPPOSITE</text>
   <rect x="105" y="705" width="290" height="145" class="warn"/>
   <text x="130" y="737" class="boxTitle">Mandatory DETECTED</text>
   <text x="130" y="767" class="boxText">If first observed state is</text>
@@ -116,4 +117,5 @@
   <rect x="70" y="945" width="1560" height="65" class="pill"/>
   <text x="100" y="975" class="boxTitle">Core rule</text>
   <text x="245" y="975" class="boxText">Monster Say always wins. Non-monster events have no priority; they help only if they improve the current prediction before pending rollover.</text>
+  <text x="245" y="1000" class="small">All lifecycle, timer, shard, storage, telemetry and future comms timestamps use CrateRush.clock:serverTime().</text>
 </svg>

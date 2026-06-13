@@ -8,6 +8,7 @@ local CRATE_STATE = CrateRush.CRATE_STATE
 local CRATE_SOURCE = CrateRush.CRATE_SOURCE
 local DOMAIN_EVENT = CrateRush.DOMAIN_EVENT
 local TIMER_REMOVE_REASON = CrateRush.TIMER_REMOVE_REASON
+local crateKeys = CrateRush.crateKeys
 
 local STATE_IDLE     = CRATE_STATE.IDLE
 local STATE_DETECTED = CRATE_STATE.DETECTED or CRATE_STATE.FLYING
@@ -16,6 +17,8 @@ local STATE_DROPPING = CRATE_STATE.DROPPING
 local STATE_LANDED   = CRATE_STATE.LANDED
 local STATE_CLAIMED_BY_ALLIANCE = CRATE_STATE.CLAIMED_BY_ALLIANCE
 local STATE_CLAIMED_BY_HORDE    = CRATE_STATE.CLAIMED_BY_HORDE
+local STATE_CLAIMED_BY_MY_FACTION = CRATE_STATE.CLAIMED_BY_MY_FACTION
+local STATE_CLAIMED_BY_OPPOSITE_FACTION = CRATE_STATE.CLAIMED_BY_OPPOSITE_FACTION
 
 local STATE_ORDER = {
     [STATE_IDLE]                = 0,
@@ -25,10 +28,15 @@ local STATE_ORDER = {
     [STATE_LANDED]              = 3,
     [STATE_CLAIMED_BY_ALLIANCE] = 4,
     [STATE_CLAIMED_BY_HORDE]    = 4,
+    [STATE_CLAIMED_BY_MY_FACTION] = 4,
+    [STATE_CLAIMED_BY_OPPOSITE_FACTION] = 4,
 }
 
 local PLANE_CONFIRM_SECONDS = CrateRush.TIMING.PLANE_CONFIRM_SECONDS
-local PLANE_CONFIRM_REQUIRED_SIGHTINGS = CrateRush.TIMING.PLANE_CONFIRM_REQUIRED_SIGHTINGS
+local PLANE_ANCHOR_CONFIRM_TICKS = CrateRush.TIMING.PLANE_ANCHOR_CONFIRM_TICKS or 3
+local PLANE_ANCHOR_CONFIRM_WINDOW_SECONDS = CrateRush.TIMING.PLANE_ANCHOR_CONFIRM_WINDOW_SECONDS or 6
+local LANDED_GONE_FLYING_CONFIRM_COUNT = CrateRush.TIMING.LANDED_GONE_FLYING_CONFIRM_COUNT or 2
+local LANDED_GONE_EXPIRY_SECONDS = CrateRush.TIMING.LANDED_GONE_EXPIRY_SECONDS or 4
 
 local recentPlane = {}
 
@@ -48,14 +56,39 @@ local function resolveCrateZoneID(zoneID)
     return tonumber(zoneID) or zoneID
 end
 
-local function makeKey(zoneID, shardID)
-    if not zoneID or not shardID then return nil end
-    return tostring(zoneID) .. ":" .. tostring(shardID)
-end
-
 local function normalizeState(state)
     if state == STATE_FLYING then return STATE_DETECTED end
     return state
+end
+
+local function clearLandedGoneTracker(record)
+    if not record then return end
+    record.landedSeenAt = nil
+    record.landedLastSeenAt = nil
+    record.landedGoneSince = nil
+    record.landedGoneFlyingCount = nil
+    record.landedGoneExpiryToken = nil
+    record.landedGUID = nil
+end
+
+local function resetLifecycleMilestones(record)
+    if not record then return end
+    record.droppedAt = nil
+    record.landedAt = nil
+    record.claimedAt = nil
+    record.claimedFaction = nil
+    record.claimedFactionName = nil
+    record.freshClaim = false
+end
+
+local function touchLandedTracker(record, now, landedGUID)
+    if not record then return end
+    record.landedSeenAt = record.landedSeenAt or now
+    record.landedLastSeenAt = now
+    record.landedGoneSince = nil
+    record.landedGoneFlyingCount = 0
+    record.landedGoneExpiryToken = nil
+    record.landedGUID = landedGUID or record.landedGUID
 end
 
 local function getStoredRecord(zoneID, shardID)
@@ -65,7 +98,7 @@ local function getStoredRecord(zoneID, shardID)
     end
 
     local record = CrateRush.storage:getCrateHistory(zoneID, shardID)
-    if record and tostring(record.shardID) == tostring(shardID) then
+    if record and crateKeys:sameShard(record.shardID, shardID) then
         return record
     end
     return nil
@@ -89,6 +122,12 @@ local function publishCrateStateChanged(zoneID, shardID, state, record, source, 
         lifecycleStartedAt = record and (record.lifecycleStartedAt or record.lastDetectedAt) or nil,
         observedCycleIndex = record and record.observedCycleIndex or nil,
         detectedAt         = record and record.detectedAt or nil,
+        droppedAt          = record and record.droppedAt or nil,
+        landedAt           = record and record.landedAt or nil,
+        claimedAt          = record and record.claimedAt or nil,
+        claimedFaction     = record and record.claimedFaction or nil,
+        claimedFactionName = record and record.claimedFactionName or nil,
+        freshClaim         = record and record.freshClaim == true or false,
         dropX              = record and record.dropX or nil,
         dropY              = record and record.dropY or nil,
         cycleAge           = cycleAge,
@@ -128,29 +167,101 @@ local function removeOtherRecordsForZone(zoneID, shardID)
     end
 end
 
-local function persistTimerSeen(record, source)
+local function claimOppositeFromLandedGone(service, zoneID, shardID, record, source, now, flyingCount, elapsedGone)
+    zoneLog("LANDED_GONE_CLAIMED_OPPOSITE zone=" .. tostring(zoneID)
+        .. " shard=" .. tostring(shardID)
+        .. " source=" .. tostring(source)
+        .. " flying=" .. tostring(flyingCount or 0) .. "/" .. tostring(LANDED_GONE_FLYING_CONFIRM_COUNT)
+        .. " elapsed=" .. tostring(elapsedGone or 0))
+
+    return service:transition(
+        zoneID,
+        shardID,
+        STATE_CLAIMED_BY_OPPOSITE_FACTION,
+        record.dropX,
+        record.dropY,
+        source,
+        now
+    )
+end
+
+local function scheduleLandedGoneExpiry(service, zoneID, shardID, record)
+    if not C_Timer or not C_Timer.After or not record or not record.landedGoneSince then return end
+
+    record.landedGoneExpiryToken = (record.landedGoneExpiryToken or 0) + 1
+    local token = record.landedGoneExpiryToken
+    local goneSince = record.landedGoneSince
+
+    C_Timer.After(LANDED_GONE_EXPIRY_SECONDS, function()
+        local current = service:getRecord(zoneID, shardID)
+        if not current or current.state ~= STATE_LANDED then return end
+        if current.landedGoneExpiryToken ~= token or current.landedGoneSince ~= goneSince then return end
+
+        local now = CrateRush.clock:serverTime()
+        local elapsedGone = now - (current.landedGoneSince or now)
+        if elapsedGone < LANDED_GONE_EXPIRY_SECONDS then return end
+
+        claimOppositeFromLandedGone(
+            service,
+            zoneID,
+            shardID,
+            current,
+            CRATE_SOURCE.LANDED_GONE_EXPIRY,
+            now,
+            current.landedGoneFlyingCount or 0,
+            elapsedGone
+        )
+    end)
+end
+
+local function publishTimerSeen(record, source)
     if not record or not record.zoneID or not record.shardID or not record.timerStart then return end
 
-    if CrateRush.storage and CrateRush.storage.recordCrate then
-        CrateRush.storage:recordCrate(
-            record.zoneID,
-            record.shardID,
-            record.timerStart,
-            record.lastSeenAt,
-            record.timerSource or source,
-            record.lastDetectedAt,
-            record.timerQuality
-        )
+    publishCrateSightingSeen(record, source)
+end
+
+local function pruneRecentPlane(now, keepKey)
+    now = now or (CrateRush.clock and CrateRush.clock.serverTime and CrateRush.clock:serverTime()) or 0
+    local expired = {}
+
+    for key, entry in pairs(recentPlane) do
+        if key ~= keepKey and now - (entry and entry.lastSeenAt or 0) > PLANE_CONFIRM_SECONDS then
+            expired[#expired + 1] = key
+        end
     end
 
-    publishCrateSightingSeen(record, source)
+    for _, key in ipairs(expired) do
+        recentPlane[key] = nil
+    end
+
+end
+
+local function startPlaneCandidate(key, vignetteGUID, now, x, y)
+    recentPlane[key] = {
+        guid = vignetteGUID,
+        firstSeenAt = now,
+        lastSeenAt = now,
+        lastX = tonumber(x),
+        lastY = tonumber(y),
+        count = 1,
+        samePositionTicks = 1,
+    }
+end
+
+local function confirmPlane(service, zoneID, shardID, key, reason, detail)
+    zoneLog("PLANE_CONFIRMED zone=" .. tostring(zoneID)
+        .. " shard=" .. tostring(shardID)
+        .. " reason=" .. tostring(reason)
+        .. (detail and (" " .. tostring(detail)) or ""))
+    recentPlane[key] = nil
+    return service:transition(zoneID, shardID, STATE_DETECTED, nil, nil, CRATE_SOURCE.FLYING)
 end
 
 local function shouldAcceptLifecycleStart(record, source, now)
     source = source or CRATE_SOURCE.UNKNOWN
 
-    if source == CRATE_SOURCE.MONSTER_SAY then
-        return true, "monster_say", nil
+    if source == CRATE_SOURCE.CRATE_CYCLE_ANCHOR then
+        return true, "crate_cycle_anchor", nil
     end
 
     local lifecycleStartedAt = record and (record.lifecycleStartedAt or record.lastDetectedAt) or nil
@@ -168,7 +279,7 @@ local function shouldAcceptLifecycleStart(record, source, now)
 end
 
 local function getOrCreate(zoneID, shardID)
-    local key = makeKey(zoneID, shardID)
+    local key = crateKeys:make(zoneID, shardID)
     if not key then return nil end
     if not CrateRush.domainState or not CrateRush.domainState.getOrCreateLifecycle then
         return nil
@@ -189,6 +300,12 @@ local function getOrCreate(zoneID, shardID)
             lifecycleStartedAt = stored and (stored.lastDetectedAt or stored.lastSeenAt or stored.timestamp) or nil,
             observedCycleIndex = nil,
             detectedAt         = nil,
+            droppedAt          = nil,
+            landedAt           = nil,
+            claimedAt          = nil,
+            claimedFaction     = nil,
+            claimedFactionName = nil,
+            freshClaim         = false,
             dropX              = nil,
             dropY              = nil,
             announced          = {},
@@ -200,8 +317,7 @@ end
 function lifecycle:isCrateObjectState(vignetteType)
     return vignetteType == CrateRush.VIGNETTE_TYPE.CRATE_DROPPING
         or vignetteType == CrateRush.VIGNETTE_TYPE.CRATE_LANDED
-        or vignetteType == CrateRush.VIGNETTE_TYPE.CRATE_CLAIMED_BY_ALLIANCE
-        or vignetteType == CrateRush.VIGNETTE_TYPE.CRATE_CLAIMED_BY_HORDE
+        or CrateRush.isCrateVignetteClaimed(vignetteType)
 end
 
 function lifecycle:shouldProcessObjectState(vignetteType, firstSeenGUID, zoneID, shardID)
@@ -224,7 +340,7 @@ function lifecycle:canTransition(zoneID, shardID, newState)
     return newOrder > currentOrder
 end
 
-function lifecycle:transition(zoneID, shardID, newState, dropX, dropY, source)
+function lifecycle:transition(zoneID, shardID, newState, dropX, dropY, source, serverEventTime)
     zoneID = resolveCrateZoneID(zoneID)
     newState = normalizeState(newState)
     if not zoneID or not shardID or not newState then return false end
@@ -233,7 +349,10 @@ function lifecycle:transition(zoneID, shardID, newState, dropX, dropY, source)
     if not record then return false end
 
     source = source or newState
-    local now = GetServerTime()
+    local now = tonumber(serverEventTime)
+    if not now or now <= 0 then
+        now = CrateRush.clock:serverTime()
+    end
     local currentOrder = STATE_ORDER[record.state] or 0
     local newOrder = STATE_ORDER[newState] or 0
     local hasRuntimeLifecycle = currentOrder > 0
@@ -259,7 +378,7 @@ function lifecycle:transition(zoneID, shardID, newState, dropX, dropY, source)
                 .. " reason=" .. tostring(detectionReason)
                 .. " elapsed=" .. tostring(detectionElapsed)
                 .. " guardian=" .. tostring(CrateRush.timerPolicy:getLifecycleDetectionGuardianSeconds()))
-            persistTimerSeen(record, source)
+            publishTimerSeen(record, source)
             return false
         end
 
@@ -274,6 +393,8 @@ function lifecycle:transition(zoneID, shardID, newState, dropX, dropY, source)
         record.detectedAt = now
         record.announced = {}
         record.lastSeenAt = now
+        resetLifecycleMilestones(record)
+        clearLandedGoneTracker(record)
 
         local _, appliedTimerReason, appliedCycleIndex, appliedCycleAge, appliedRemaining =
             CrateRush.timerPolicy:applyTimerLifecycle(record, zoneID, source, now)
@@ -281,10 +402,6 @@ function lifecycle:transition(zoneID, shardID, newState, dropX, dropY, source)
         cycleIndex = appliedCycleIndex
         cycleAge = appliedCycleAge
         remaining = appliedRemaining
-
-        if CrateRush.storage and CrateRush.storage.recordCrate then
-            CrateRush.storage:recordCrate(zoneID, shardID, record.timerStart, record.lastSeenAt, record.timerSource or source, record.lastDetectedAt, record.timerQuality)
-        end
 
         CrateRush.debug:log("SHARDMAP | zone=" .. tostring(zoneID)
             .. " shard=" .. tostring(shardID)
@@ -310,7 +427,7 @@ function lifecycle:transition(zoneID, shardID, newState, dropX, dropY, source)
         currentOrder = STATE_ORDER[record.state] or 0
         if newOrder <= currentOrder then
             record.lastSeenAt = now
-            persistTimerSeen(record, source)
+            publishTimerSeen(record, source)
             zoneLog("LIFECYCLE_DUPLICATE zone=" .. tostring(zoneID)
                 .. " shard=" .. tostring(shardID)
                 .. " state=" .. tostring(newState)
@@ -319,9 +436,33 @@ function lifecycle:transition(zoneID, shardID, newState, dropX, dropY, source)
             return publishedAny
         end
 
+        local previousState = record.state
         record.state = newState
         record.lastSeenAt = now
         if dropX and dropY then record.dropX = dropX; record.dropY = dropY end
+        if newState == STATE_DROPPING then
+            record.droppedAt = now
+        elseif newState == STATE_LANDED then
+            record.landedAt = now
+            touchLandedTracker(record, now)
+        elseif CrateRush.isCrateStateClaimed and CrateRush.isCrateStateClaimed(newState) then
+            record.claimedAt = now
+            record.freshClaim = newState == STATE_CLAIMED_BY_MY_FACTION and previousState == STATE_LANDED
+            if newState == STATE_CLAIMED_BY_MY_FACTION then
+                record.claimedFaction = CrateRush.playerContext
+                    and CrateRush.playerContext.getFactionKey
+                    and CrateRush.playerContext:getFactionKey()
+                    or CrateRush.resolveFactionKey(nil)
+                record.claimedFactionName = CrateRush.playerContext
+                    and CrateRush.playerContext.getFaction
+                    and CrateRush.playerContext:getFaction()
+                    or CrateRush.resolveFactionName(record.claimedFaction)
+            elseif newState == STATE_CLAIMED_BY_OPPOSITE_FACTION then
+                record.claimedFaction = "OPPOSITE"
+                record.claimedFactionName = "Opposite faction"
+            end
+            clearLandedGoneTracker(record)
+        end
 
         if not record.timerStart then
             local _, appliedTimerReason, appliedCycleIndex, appliedCycleAge, appliedRemaining =
@@ -330,10 +471,6 @@ function lifecycle:transition(zoneID, shardID, newState, dropX, dropY, source)
             cycleIndex = appliedCycleIndex
             cycleAge = appliedCycleAge
             remaining = appliedRemaining
-        end
-
-        if CrateRush.storage and CrateRush.storage.recordCrate then
-            CrateRush.storage:recordCrate(zoneID, shardID, record.timerStart, record.lastSeenAt, record.timerSource or source, record.lastDetectedAt, record.timerQuality)
         end
 
         CrateRush.debug:log("SHARDMAP | zone=" .. tostring(zoneID)
@@ -352,13 +489,17 @@ function lifecycle:transition(zoneID, shardID, newState, dropX, dropY, source)
     return publishedAny
 end
 
-function lifecycle:onPlaneSeen(zoneID, shardID, vignetteGUID)
+function lifecycle:onPlaneSeen(zoneID, shardID, vignetteGUID, x, y)
     zoneID = resolveCrateZoneID(zoneID)
-    if not zoneID or not shardID or not vignetteGUID then return false end
-    local key = makeKey(zoneID, shardID)
+    x = tonumber(x)
+    y = tonumber(y)
+    if not zoneID or not shardID or not vignetteGUID or not x or not y then return false end
+    local key = crateKeys:make(zoneID, shardID)
     if not key then return false end
 
-    local now = GetServerTime()
+    local now = CrateRush.clock:serverTime()
+    pruneRecentPlane(now, key)
+
     local guardRecord = CrateRush.domainState
         and CrateRush.domainState.getLifecycle
         and CrateRush.domainState:getLifecycle(zoneID, shardID)
@@ -370,43 +511,172 @@ function lifecycle:onPlaneSeen(zoneID, shardID, vignetteGUID)
     end
 
     if not recentPlane[key] then
-        recentPlane[key] = { guid = vignetteGUID, firstSeenAt = now, lastSeenAt = now, count = 1 }
-        zoneLog("PLANE_SEEN zone=" .. tostring(zoneID)
+        startPlaneCandidate(key, vignetteGUID, now, x, y)
+        local point = CrateRush.routeData and CrateRush.routeData:classifyPlanePoint(zoneID, x, y) or nil
+        zoneLog("PLANE_CANDIDATE zone=" .. tostring(zoneID)
             .. " shard=" .. tostring(shardID)
-            .. " count=1/" .. tostring(PLANE_CONFIRM_REQUIRED_SIGHTINGS))
+            .. " count=1"
+            .. " x=" .. tostring(x)
+            .. " y=" .. tostring(y)
+            .. " anchor=" .. tostring(point and point.nearAnchor or false)
+            .. " drop=" .. tostring(point and point.nearKnownDrop or false)
+            .. " routes=" .. tostring(point and point.routeCount or 0))
         return false
     elseif recentPlane[key].guid ~= vignetteGUID then
-        recentPlane[key] = { guid = vignetteGUID, firstSeenAt = now, lastSeenAt = now, count = 1 }
+        startPlaneCandidate(key, vignetteGUID, now, x, y)
         zoneLog("PLANE_RESET zone=" .. tostring(zoneID)
             .. " shard=" .. tostring(shardID)
-            .. " reason=newGuid count=1/" .. tostring(PLANE_CONFIRM_REQUIRED_SIGHTINGS))
+            .. " reason=newGuid count=1")
         return false
     end
 
     local gap = now - (recentPlane[key].lastSeenAt or now)
     if gap > PLANE_CONFIRM_SECONDS then
-        recentPlane[key] = { guid = vignetteGUID, firstSeenAt = now, lastSeenAt = now, count = 1 }
+        startPlaneCandidate(key, vignetteGUID, now, x, y)
         zoneLog("PLANE_RESET zone=" .. tostring(zoneID)
             .. " shard=" .. tostring(shardID)
             .. " reason=gap gap=" .. tostring(gap)
-            .. " count=1/" .. tostring(PLANE_CONFIRM_REQUIRED_SIGHTINGS))
+            .. " count=1")
         return false
     end
 
-    recentPlane[key].lastSeenAt = now
-    recentPlane[key].count = (recentPlane[key].count or 1) + 1
-    zoneLog("PLANE_SEEN zone=" .. tostring(zoneID)
-        .. " shard=" .. tostring(shardID)
-        .. " count=" .. tostring(recentPlane[key].count) .. "/" .. tostring(PLANE_CONFIRM_REQUIRED_SIGHTINGS)
-        .. " gap=" .. tostring(gap))
+    local candidate = recentPlane[key]
+    local routeData = CrateRush.routeData
+    local distance = routeData and routeData:mapDistanceDegrees(candidate.lastX, candidate.lastY, x, y) or nil
+    local tolerance = routeData and routeData:getPositionToleranceDegrees() or 0.05
+    local moved = distance and distance > tolerance
+    local point = routeData and routeData:classifyPlanePoint(zoneID, x, y) or nil
 
-    if recentPlane[key].count >= PLANE_CONFIRM_REQUIRED_SIGHTINGS then
-        local confirmed = self:transition(zoneID, shardID, STATE_DETECTED, nil, nil, CRATE_SOURCE.FLYING)
-        recentPlane[key] = nil
-        return confirmed
+    candidate.lastSeenAt = now
+    candidate.count = (candidate.count or 1) + 1
+
+    if moved then
+        candidate.lastX = x
+        candidate.lastY = y
+        candidate.samePositionTicks = 1
+        return confirmPlane(self, zoneID, shardID, key, "movement",
+            "distance=" .. tostring(distance) .. " tolerance=" .. tostring(tolerance))
     end
 
+    candidate.lastX = x
+    candidate.lastY = y
+    candidate.samePositionTicks = (candidate.samePositionTicks or 1) + 1
+
+    if point and point.nearAnchor and candidate.samePositionTicks >= PLANE_ANCHOR_CONFIRM_TICKS then
+        local anchorWindow = now - (candidate.firstSeenAt or now)
+        if anchorWindow <= PLANE_ANCHOR_CONFIRM_WINDOW_SECONDS then
+            return confirmPlane(self, zoneID, shardID, key, "anchor_hold",
+                "ticks=" .. tostring(candidate.samePositionTicks)
+                .. " window=" .. tostring(anchorWindow)
+                .. " distance=" .. tostring(point.anchorDistance))
+        end
+
+        startPlaneCandidate(key, vignetteGUID, now, x, y)
+        zoneLog("PLANE_RESET zone=" .. tostring(zoneID)
+            .. " shard=" .. tostring(shardID)
+            .. " reason=anchor_window window=" .. tostring(anchorWindow)
+            .. " count=1")
+        return false
+    end
+
+    if point and point.nearKnownDrop then
+        zoneLog("PLANE_PENDING zone=" .. tostring(zoneID)
+            .. " shard=" .. tostring(shardID)
+            .. " reason=near_drop"
+            .. " ticks=" .. tostring(candidate.samePositionTicks)
+            .. " drop=" .. tostring(point.nearestDropID)
+            .. " distance=" .. tostring(point.nearestDropDistance)
+            .. " gap=" .. tostring(gap))
+        return false
+    end
+
+    if point and point.knownEnRoute and not point.nearAnchor and candidate.samePositionTicks >= 2 then
+        return confirmPlane(self, zoneID, shardID, key, "known_route_hold",
+            "ticks=" .. tostring(candidate.samePositionTicks)
+            .. " routes=" .. tostring(point.routeCount)
+            .. " rough=" .. tostring(point.cells and point.cells.roughKey)
+            .. " fine=" .. tostring(point.cells and point.cells.fineKey))
+    end
+
+    zoneLog("PLANE_PENDING zone=" .. tostring(zoneID)
+        .. " shard=" .. tostring(shardID)
+        .. " reason=unknown_hold"
+        .. " ticks=" .. tostring(candidate.samePositionTicks)
+        .. " routes=" .. tostring(point and point.routeCount or 0)
+        .. " anchor=" .. tostring(point and point.nearAnchor or false)
+        .. " drop=" .. tostring(point and point.nearKnownDrop or false)
+        .. " distance=" .. tostring(distance)
+        .. " gap=" .. tostring(gap))
+
     return false
+end
+
+function lifecycle:onVignetteScanComplete(zoneID, shardID, scanContext, trigger)
+    if trigger ~= CrateRush.SCAN_TRIGGER.VIGNETTES_UPDATED then return false end
+    zoneID = resolveCrateZoneID(zoneID)
+    if not zoneID or not shardID then return false end
+
+    local record = self:getRecord(zoneID, shardID)
+    if not record or record.state ~= STATE_LANDED then return false end
+
+    local key = crateKeys:make(zoneID, shardID)
+    local observation = scanContext
+        and scanContext.observedByKey
+        and key
+        and scanContext.observedByKey[key]
+        or nil
+
+    local now = CrateRush.clock:serverTime()
+    if observation and observation.claimedState then
+        return self:transition(
+            zoneID,
+            shardID,
+            observation.claimedState,
+            record.dropX,
+            record.dropY,
+            observation.claimedSource,
+            now
+        )
+    end
+
+    if observation and observation.landedSeen then
+        touchLandedTracker(record, now, observation.landedGUID)
+        return false
+    end
+
+    if not record.landedSeenAt and not record.landedLastSeenAt then
+        return false
+    end
+
+    local landedGoneStarted = not record.landedGoneSince
+    record.landedGoneSince = record.landedGoneSince or now
+    if landedGoneStarted then
+        scheduleLandedGoneExpiry(self, zoneID, shardID, record)
+    end
+    if observation and observation.planeSeen then
+        record.landedGoneFlyingCount = (record.landedGoneFlyingCount or 0) + 1
+    end
+
+    local flyingCount = record.landedGoneFlyingCount or 0
+    local elapsedGone = now - (record.landedGoneSince or now)
+    local source = nil
+
+    if flyingCount >= LANDED_GONE_FLYING_CONFIRM_COUNT then
+        source = CRATE_SOURCE.LANDED_GONE_WHILE_FLYING
+    elseif elapsedGone >= LANDED_GONE_EXPIRY_SECONDS then
+        source = CRATE_SOURCE.LANDED_GONE_EXPIRY
+    end
+
+    if not source then
+        zoneLog("LANDED_GONE_PENDING zone=" .. tostring(zoneID)
+            .. " shard=" .. tostring(shardID)
+            .. " flying=" .. tostring(flyingCount) .. "/" .. tostring(LANDED_GONE_FLYING_CONFIRM_COUNT)
+            .. " elapsed=" .. tostring(elapsedGone)
+            .. " expiry=" .. tostring(LANDED_GONE_EXPIRY_SECONDS))
+        return false
+    end
+
+    return claimOppositeFromLandedGone(self, zoneID, shardID, record, source, now, flyingCount, elapsedGone)
 end
 
 function lifecycle:getRecord(zoneID, shardID)

@@ -6,6 +6,8 @@ CrateRush.timers = timers
 
 local DOMAIN_EVENT = CrateRush.DOMAIN_EVENT
 local TIMER_REMOVE_REASON = CrateRush.TIMER_REMOVE_REASON
+local CRATE_SOURCE = CrateRush.CRATE_SOURCE
+local crateKeys = CrateRush.crateKeys
 
 local function getFrequency(zoneID)
     if not zoneID then return CrateRush.DEFAULT_ZONE_FREQUENCY end
@@ -22,6 +24,13 @@ end
 
 local function getMaxUnseenSeconds(zoneID)
     return getFrequency(zoneID) * getMaxUnseenCycles()
+end
+
+local function getZoneName(zoneID)
+    if CrateRush.zoneResolver and CrateRush.zoneResolver.getCrateZoneName then
+        return CrateRush.zoneResolver:getCrateZoneName(zoneID)
+    end
+    return zoneID and tostring(zoneID) or "Unknown"
 end
 
 local tickFrame
@@ -45,6 +54,13 @@ local function getActiveTimerForZone(zoneID)
         return CrateRush.domainState:getActiveTimer(zoneID)
     end
     return nil
+end
+
+local function hasActiveTimers()
+    if CrateRush.domainState and CrateRush.domainState.hasActiveTimers then
+        return CrateRush.domainState:hasActiveTimers()
+    end
+    return next(getTimerRecords()) ~= nil
 end
 
 local function shouldPreferTimer(candidate, candidateKey, current)
@@ -91,13 +107,8 @@ local function resetLifecycleRecord(zoneID, shardID)
     end
 end
 
-local function sameShard(a, b)
-    if a == nil or b == nil then return false end
-    return tostring(a) == tostring(b)
-end
-
 local function notifyExpiredNoSightings(zoneID, shardID, lastSeenAt, maxUnseenSeconds)
-    CrateRush.debug:log("TIMER STALE | zone=" .. tostring(zoneID)
+    CrateRush.logDebug("TIMER STALE | zone=" .. tostring(zoneID)
         .. " shard=" .. tostring(shardID)
         .. " lastSeenAt=" .. tostring(lastSeenAt)
         .. " maxUnseenSeconds=" .. tostring(maxUnseenSeconds)
@@ -106,7 +117,7 @@ local function notifyExpiredNoSightings(zoneID, shardID, lastSeenAt, maxUnseenSe
     if CrateRush.onTimerExpiredDueToNoSightings then
         local ok, err = pcall(CrateRush.onTimerExpiredDueToNoSightings, zoneID, shardID, lastSeenAt, maxUnseenSeconds)
         if not ok then
-            CrateRush.debug:log("TIMER STALE NOTIFY ERROR | " .. tostring(err))
+            CrateRush.logDebug("TIMER STALE NOTIFY ERROR | " .. tostring(err))
         end
     end
 end
@@ -129,8 +140,12 @@ local function removeTimerKey(key, removeStorage, reason, resetRuntimeRecord)
         resetLifecycleRecord(timer.zoneID, timer.shardID)
     end
 
-    CrateRush.debug:log("TIMER REMOVED | key=" .. tostring(key)
+    CrateRush.logDebug("TIMER REMOVED | key=" .. tostring(key)
         .. " reason=" .. tostring(reason or TIMER_REMOVE_REASON.MANUAL))
+
+    if not hasActiveTimers() and timers.stopTick then
+        timers:stopTick()
+    end
 end
 
 local function removeOtherTimersForZone(zoneID, shardID)
@@ -147,9 +162,24 @@ local function removeOtherTimersForZone(zoneID, shardID)
 
         resetLifecycleRecord(timer.zoneID, timer.shardID)
 
-        CrateRush.debug:log("TIMER REMOVED | key=" .. tostring(item.key)
+        CrateRush.logDebug("TIMER REMOVED | key=" .. tostring(item.key)
             .. " reason=" .. TIMER_REMOVE_REASON.ZONE_SHARD_REPLACED)
     end
+end
+
+local function markTimersDirtyExceptZones(includedZones)
+    includedZones = includedZones or {}
+    local dirtyCount = 0
+
+    for _, timer in pairs(getTimerRecords()) do
+        local zoneKey = timer and timer.zoneID and tostring(timer.zoneID) or nil
+        if zoneKey and not includedZones[zoneKey] then
+            timer.dirty = true
+            dirtyCount = dirtyCount + 1
+        end
+    end
+
+    return dirtyCount
 end
 
 local function isTimerStale(timer, now)
@@ -162,7 +192,7 @@ local function isTimerStale(timer, now)
 end
 
 local function tick()
-    local now = GetServerTime()
+    local now = CrateRush.clock:serverTime()
 
     local expired = {}
     for k, t in pairs(getTimerRecords()) do
@@ -199,6 +229,8 @@ local function tick()
                 lastSeenAt = t.lastSeenAt,
                 remaining = remaining,
                 freq      = freq,
+                maxUnseenCycles = getMaxUnseenCycles(),
+                dirty     = t.dirty == true,
             }
             local zoneKey = tostring(t.zoneID)
             if shouldPreferTimer(t, k, visibleByZone[zoneKey]) then
@@ -229,14 +261,17 @@ function timers:startTick()
     end)
 end
 
-function timers:onStateChange(zoneID, shardID, state, timerStart, lastSeenAt, source, timerQuality)
+function timers:stopTick()
+    if not tickFrame then return end
+    tickFrame:SetScript("OnUpdate", nil)
+    tickFrame:Hide()
+    tickFrame = nil
+end
+
+function timers:onStateChange(zoneID, shardID, state, timerStart, lastSeenAt, source, timerQuality, dirty)
     if not zoneID or not shardID or not timerStart then return end
-    local k = tostring(zoneID) .. ":" .. tostring(shardID)
-    local zoneName = CrateRush.getCrateZoneName and CrateRush.getCrateZoneName(zoneID) or nil
-    if not zoneName then
-        local ok, mapInfo = pcall(C_Map.GetMapInfo, zoneID)
-        zoneName = (ok and mapInfo and mapInfo.name) or tostring(zoneID)
-    end
+    local k = crateKeys:make(zoneID, shardID)
+    local zoneName = getZoneName(zoneID)
 
     removeOtherTimersForZone(zoneID, shardID)
 
@@ -248,6 +283,7 @@ function timers:onStateChange(zoneID, shardID, state, timerStart, lastSeenAt, so
             source       = source,
             timerSource  = source,
             timerQuality = timerQuality,
+            dirty        = dirty == true,
         })
     end
 
@@ -263,17 +299,16 @@ end
 
 function timers:onTimerSeen(zoneID, shardID, lastSeenAt)
     if not zoneID or not shardID or not lastSeenAt then return end
-    removeOtherTimersForZone(zoneID, shardID)
 
-    local k = tostring(zoneID) .. ":" .. tostring(shardID)
     if CrateRush.domainState and CrateRush.domainState.getTimer and CrateRush.domainState:getTimer(zoneID, shardID) then
+        removeOtherTimersForZone(zoneID, shardID)
         CrateRush.domainState:touchTimer(zoneID, shardID, lastSeenAt)
         tick()
         return
     end
 
     local record = CrateRush.storage and CrateRush.storage.getCrateHistory and CrateRush.storage:getCrateHistory(zoneID, shardID)
-    if record and record.timestamp and sameShard(record.shardID, shardID) then
+    if record and record.timestamp and crateKeys:sameShard(record.shardID, shardID) then
         timers:onStateChange(zoneID, shardID, nil, record.timestamp, lastSeenAt or record.lastSeenAt, record.source, record.timerQuality)
     end
 end
@@ -297,8 +332,16 @@ function timers:onCrateSightingSeen(payload)
 end
 
 function timers:onTimerRemovalRequested(payload)
-    if type(payload) ~= "table" or not payload.key then return end
-    removeTimerKey(payload.key, true, payload.reason or TIMER_REMOVE_REASON.MANUAL)
+    if type(payload) ~= "table" then return end
+
+    if payload.key then
+        removeTimerKey(payload.key, true, payload.reason or TIMER_REMOVE_REASON.MANUAL)
+        return
+    end
+
+    if payload.zoneID then
+        timers:removeZone(payload.zoneID, payload.reason or TIMER_REMOVE_REASON.MANUAL)
+    end
 end
 
 function timers:removeByKey(key)
@@ -308,8 +351,69 @@ end
 
 function timers:remove(zoneID, shardID)
     if not zoneID or not shardID then return end
-    local k = tostring(zoneID) .. ":" .. tostring(shardID)
+    local k = crateKeys:make(zoneID, shardID)
     timers:removeByKey(k)
+end
+
+function timers:removeZone(zoneID, reason)
+    if not zoneID then return false end
+
+    local activeTimer = getActiveTimerForZone(zoneID)
+    if activeTimer and activeTimer.key then
+        removeTimerKey(activeTimer.key, true, reason or TIMER_REMOVE_REASON.MANUAL)
+        return true
+    end
+
+    if CrateRush.storage and CrateRush.storage.removeCrate then
+        return CrateRush.storage:removeCrate(zoneID)
+    end
+
+    return false
+end
+
+function timers:applyRemoteSnapshot(entries, senderGUID)
+    if type(entries) ~= "table" then return false end
+
+    local includedZones = {}
+    local applied = 0
+
+    for _, entry in ipairs(entries) do
+        if type(entry) == "table" then
+            local zoneID = tonumber(entry.zoneID or entry.zoneId)
+            local shardID = entry.shardID or entry.shardId
+            local timerStart = tonumber(entry.timerStart or entry.nextTimerStart)
+            local lastSeenAt = tonumber(entry.lastSeenAt) or timerStart
+
+            if zoneID and shardID and timerStart then
+                includedZones[tostring(zoneID)] = true
+                timers:onStateChange(
+                    zoneID,
+                    shardID,
+                    nil,
+                    timerStart,
+                    lastSeenAt,
+                    CRATE_SOURCE.REMOTE_TIMER_SYNC,
+                    "remote",
+                    entry.dirty == true or entry.dirty == "true"
+                )
+                applied = applied + 1
+            end
+        end
+    end
+
+    local dirtyCount = markTimersDirtyExceptZones(includedZones)
+    tick()
+
+    CrateRush.logDebug("TIMER SYNC APPLIED | timers=" .. tostring(applied)
+        .. " dirty=" .. tostring(dirtyCount)
+        .. " senderGUID=" .. tostring(senderGUID))
+
+    return true
+end
+
+function timers:onTimerSyncReceived(payload)
+    if type(payload) ~= "table" then return end
+    timers:applyRemoteSnapshot(payload.timers, payload.senderGUID)
 end
 
 function timers:getActiveTimersSnapshot()
@@ -331,19 +435,14 @@ function timers:restore()
     local history = CrateRush.storage and CrateRush.storage:getAll()
     if not history then return end
 
-    local now = GetServerTime()
+    local now = CrateRush.clock:serverTime()
     for historyKey, record in pairs(history) do
         local zoneID = record and record.zoneID or tostring(historyKey):match("^([^:]+)")
         zoneID = tonumber(zoneID) or zoneID
         if record and zoneID and record.shardID and record.timestamp then
             local elapsed = now - record.timestamp
             local lastSeenAt = record.lastSeenAt or record.timestamp
-            local k = tostring(zoneID) .. ":" .. tostring(record.shardID)
-            local zoneName = CrateRush.getCrateZoneName and CrateRush.getCrateZoneName(tonumber(zoneID) or zoneID) or nil
-            if not zoneName then
-                local ok, mapInfo = pcall(C_Map.GetMapInfo, tonumber(zoneID) or zoneID)
-                zoneName = (ok and mapInfo and mapInfo.name) or tostring(zoneID)
-            end
+            local zoneName = getZoneName(tonumber(zoneID) or zoneID)
 
             local maxUnseenSeconds = getMaxUnseenSeconds(tonumber(zoneID) or zoneID)
             if (now - lastSeenAt) > maxUnseenSeconds then
@@ -361,12 +460,12 @@ function timers:restore()
                     record.source,
                     record.timerQuality
                 )
-                CrateRush.debug:log("TIMER RESTORED | zone=" .. zoneName .. " shard=" .. tostring(record.shardID) .. " elapsed=" .. tostring(elapsed) .. "s")
+                CrateRush.logDebug("TIMER RESTORED | zone=" .. zoneName .. " shard=" .. tostring(record.shardID) .. " elapsed=" .. tostring(elapsed) .. "s")
             end
         end
     end
 
-    if CrateRush.domainState and CrateRush.domainState.hasActiveTimers and CrateRush.domainState:hasActiveTimers() then
+    if hasActiveTimers() then
         timers:startTick()
     end
 end
@@ -380,5 +479,8 @@ if CrateRush.domainEvents and DOMAIN_EVENT then
     end
     if DOMAIN_EVENT.TIMER_REMOVAL_REQUESTED then
         CrateRush.domainEvents:subscribe(DOMAIN_EVENT.TIMER_REMOVAL_REQUESTED, timers, "onTimerRemovalRequested")
+    end
+    if DOMAIN_EVENT.TIMER_SYNC_RECEIVED then
+        CrateRush.domainEvents:subscribe(DOMAIN_EVENT.TIMER_SYNC_RECEIVED, timers, "onTimerSyncReceived")
     end
 end

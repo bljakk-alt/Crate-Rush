@@ -10,21 +10,21 @@ CrateRush.VIGNETTE_IDS = {
     [3689] = CrateRush.VIGNETTE_TYPE.PLANE_FLYING,
     [2967] = CrateRush.VIGNETTE_TYPE.CRATE_DROPPING,
     [6066] = CrateRush.VIGNETTE_TYPE.CRATE_LANDED,
-    [6067] = CrateRush.VIGNETTE_TYPE.CRATE_CLAIMED_BY_ALLIANCE,
-    [6068] = CrateRush.VIGNETTE_TYPE.CRATE_CLAIMED_BY_HORDE,
+    [6067] = CrateRush.VIGNETTE_TYPE.CRATE_CLAIMED_MARKER_ALLIANCE,
+    [6068] = CrateRush.VIGNETTE_TYPE.CRATE_CLAIMED_MARKER_HORDE,
     [6072] = CrateRush.VIGNETTE_TYPE.UNKNOWN_6072,
 }
 
--- NPCs that announce crate incoming (CHAT_MSG_MONSTER_SAY)
--- NPC names are zone-specific but phrases may overlap
-CrateRush.CRATE_NPC_NAMES = {
+-- NPCs and phrases that turn a raw NPC announcement into an accepted crate cycle anchor.
+-- NPC names are zone-specific but phrases may overlap.
+CrateRush.CRATE_CYCLE_ANCHOR_NPC_NAMES = {
     ["Vidious"]  = true,
     ["Ziadan"]   = true,
     ["Ruffious"] = true,
 }
 
 -- Trigger phrases — any substring match means crate incoming
-CrateRush.CRATE_NPC_PHRASES = {
+CrateRush.CRATE_CYCLE_ANCHOR_PHRASES = {
     "opportunity",
     "opportunities",
     "opportunities for loot",
@@ -45,15 +45,15 @@ CrateRush.ZONE_FREQUENCY = {
     [2346] = 1100, -- Undermine
     [2369] = 1100, -- Siren Isle
     [2395] = 1099, -- Eversong Woods
-    [2437] = 1099, -- Zul'Aman
+    [2437] = 1098, -- Zul'Aman
     [2022] = 2700, -- Waking Shores
     [2023] = 2700, -- Ohn'ahran Plains
     [2024] = 2700, -- Azure Span
     [2025] = 2700, -- Thaldraszus
     [2371] = 1100, -- K'aresh
-    [2405] = 1099, -- VoidStorm
+    [2405] = 1097, -- VoidStorm
     [2444] = 1091, -- Slayer's Rise
-    [2413] = 1100, -- Harandar
+    [2413] = 1099, -- Harandar
 }
 
 local DEFAULT_ZONE_FREQUENCY = 1100

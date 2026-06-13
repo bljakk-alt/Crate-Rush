@@ -5,6 +5,14 @@ local zones = {}
 CrateRush.ZONES = zones
 CrateRush.zones = zones
 
+CrateRush.DISPLAY_CRATE_ZONES = {
+    2437, -- Zul'Aman
+    2413, -- Harandar
+    2395, -- Eversong Woods
+    2405, -- Voidstorm
+    2444, -- Slayer's Rise
+}
+
 CrateRush.ALLOWED_CRATE_ZONES = {
     [2248] = true, -- Isle of Dorn
     [2214] = true, -- Ringing Deeps
@@ -129,6 +137,17 @@ end
 
 function zones:isAllowedCrateZone(mapID)
     return self:resolveCrateZoneID(mapID) ~= nil
+end
+
+function zones:getDisplayCrateZones()
+    local result = {}
+    for _, zoneID in ipairs(CrateRush.DISPLAY_CRATE_ZONES or {}) do
+        result[#result + 1] = {
+            zoneID = zoneID,
+            zoneName = self:getCrateZoneName(zoneID),
+        }
+    end
+    return result
 end
 
 function zones:getCrateZoneName(mapID)

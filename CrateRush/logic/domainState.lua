@@ -5,6 +5,7 @@ local domainState = {}
 CrateRush.domainState = domainState
 
 local DOMAIN_EVENT = CrateRush.DOMAIN_EVENT
+local crateKeys = CrateRush.crateKeys
 
 local lifecycleByKey = {}
 local currentLifecycleKeyByZone = {}
@@ -12,22 +13,6 @@ local timerByKey = {}
 local activeTimerKeyByZone = {}
 local zoneShardStatusByZone = {}
 local visibleTimersByZone = {}
-
-local function makeKey(zoneID, shardID)
-    if not zoneID or not shardID then return nil end
-    return tostring(zoneID) .. ":" .. tostring(shardID)
-end
-
-local function parseZoneFromKey(key)
-    if not key then return nil end
-    local zoneID = tostring(key):match("^([^:]+)")
-    return tonumber(zoneID) or zoneID
-end
-
-local function sameShard(a, b)
-    if a == nil or b == nil then return false end
-    return tostring(a) == tostring(b)
-end
 
 local function copyTable(value)
     if type(value) ~= "table" then return {} end
@@ -53,8 +38,8 @@ local function removeOtherZoneKeys(index, zoneID, shardID)
     local removed = {}
     for key, record in pairs(index) do
         if record
-            and tostring(record.zoneID or parseZoneFromKey(key)) == tostring(zoneID)
-            and not sameShard(record.shardID, shardID)
+            and tostring(record.zoneID or crateKeys:parseZone(key)) == tostring(zoneID)
+            and not crateKeys:sameShard(record.shardID, shardID)
         then
             removed[#removed + 1] = {
                 key    = key,
@@ -71,11 +56,11 @@ local function removeOtherZoneKeys(index, zoneID, shardID)
 end
 
 function domainState:makeKey(zoneID, shardID)
-    return makeKey(zoneID, shardID)
+    return crateKeys:make(zoneID, shardID)
 end
 
 function domainState:getOrCreateLifecycle(zoneID, shardID, initial)
-    local key = makeKey(zoneID, shardID)
+    local key = crateKeys:make(zoneID, shardID)
     if not key then return nil end
 
     if not lifecycleByKey[key] then
@@ -90,7 +75,7 @@ function domainState:getOrCreateLifecycle(zoneID, shardID, initial)
 end
 
 function domainState:setCurrentLifecycle(zoneID, shardID)
-    local key = makeKey(zoneID, shardID)
+    local key = crateKeys:make(zoneID, shardID)
     if not key then return false end
 
     currentLifecycleKeyByZone[tostring(zoneID)] = key
@@ -112,7 +97,7 @@ function domainState:removeOtherLifecyclesForZone(zoneID, shardID)
 end
 
 function domainState:removeLifecycle(zoneID, shardID)
-    local key = makeKey(zoneID, shardID)
+    local key = crateKeys:make(zoneID, shardID)
     if not key then return nil end
 
     local record = lifecycleByKey[key]
@@ -126,7 +111,7 @@ function domainState:removeLifecycle(zoneID, shardID)
 end
 
 function domainState:getLifecycle(zoneID, shardID)
-    local key = makeKey(zoneID, shardID)
+    local key = crateKeys:make(zoneID, shardID)
     return key and lifecycleByKey[key] or nil
 end
 
@@ -144,7 +129,7 @@ function domainState:getLifecycleRecordsSnapshot()
 end
 
 function domainState:setTimer(zoneID, shardID, timer)
-    local key = makeKey(zoneID, shardID)
+    local key = crateKeys:make(zoneID, shardID)
     if not key then return nil end
 
     domainState:removeOtherTimersForZone(zoneID, shardID)
@@ -164,7 +149,7 @@ function domainState:setTimer(zoneID, shardID, timer)
 end
 
 function domainState:touchTimer(zoneID, shardID, lastSeenAt)
-    local key = makeKey(zoneID, shardID)
+    local key = crateKeys:make(zoneID, shardID)
     local timer = key and timerByKey[key] or nil
     if not timer then return nil end
 
@@ -195,7 +180,7 @@ function domainState:removeTimerByKey(key)
     if timer and timer.zoneID and activeTimerKeyByZone[tostring(timer.zoneID)] == key then
         activeTimerKeyByZone[tostring(timer.zoneID)] = nil
     else
-        local zoneID = parseZoneFromKey(key)
+        local zoneID = crateKeys:parseZone(key)
         if zoneID and activeTimerKeyByZone[tostring(zoneID)] == key then
             activeTimerKeyByZone[tostring(zoneID)] = nil
         end
@@ -205,11 +190,11 @@ function domainState:removeTimerByKey(key)
 end
 
 function domainState:removeTimer(zoneID, shardID)
-    return domainState:removeTimerByKey(makeKey(zoneID, shardID))
+    return domainState:removeTimerByKey(crateKeys:make(zoneID, shardID))
 end
 
 function domainState:getTimer(zoneID, shardID)
-    local key = makeKey(zoneID, shardID)
+    local key = crateKeys:make(zoneID, shardID)
     return key and timerByKey[key] or nil
 end
 
@@ -265,39 +250,29 @@ function domainState:onCrateStateChanged(payload)
     domainState:removeOtherLifecyclesForZone(payload.zoneID, payload.shardID)
     domainState:setCurrentLifecycle(payload.zoneID, payload.shardID)
 
-    local update = copyTable(payload)
-    for field, value in pairs(update) do
-        record[field] = value
-    end
+    record.zoneID = payload.zoneID
+    record.shardID = payload.shardID
     record.state = payload.state
     record.lifecycleStartedAt = payload.lifecycleStartedAt
         or record.lifecycleStartedAt
         or payload.lastDetectedAt
         or payload.detectedAt
+    record.lastSeenAt = payload.lastSeenAt or record.lastSeenAt
+    record.lastDetectedAt = payload.lastDetectedAt or record.lastDetectedAt
+    record.detectedAt = payload.detectedAt or record.detectedAt
+    record.droppedAt = payload.droppedAt or record.droppedAt
+    record.landedAt = payload.landedAt or record.landedAt
+    record.claimedAt = payload.claimedAt or record.claimedAt
+    record.claimedFaction = payload.claimedFaction or record.claimedFaction
+    record.claimedFactionName = payload.claimedFactionName or record.claimedFactionName
+    record.freshClaim = payload.freshClaim == true
+    record.dropX = payload.dropX or record.dropX
+    record.dropY = payload.dropY or record.dropY
 
-    if payload.timerStart then
-        domainState:removeOtherTimersForZone(payload.zoneID, payload.shardID)
-        domainState:setTimer(payload.zoneID, payload.shardID, {
-            timerStart   = payload.timerStart,
-            timerSource  = payload.timerSource or payload.source,
-            timerQuality = payload.timerQuality,
-            lastSeenAt   = payload.lastSeenAt or payload.timerStart,
-        })
-    end
 end
 
 function domainState:onCrateSightingSeen(payload)
     if type(payload) ~= "table" or not payload.zoneID or not payload.shardID then return end
-
-    if payload.timerStart then
-        domainState:removeOtherTimersForZone(payload.zoneID, payload.shardID)
-        domainState:setTimer(payload.zoneID, payload.shardID, {
-            timerStart   = payload.timerStart,
-            timerSource  = payload.timerSource or payload.source,
-            timerQuality = payload.timerQuality,
-            lastSeenAt   = payload.lastSeenAt or payload.timerStart,
-        })
-    end
 
     local lifecycle = domainState:getLifecycle(payload.zoneID, payload.shardID)
     if lifecycle then
@@ -311,7 +286,7 @@ function domainState:onActiveTimerChanged(payload)
     visibleTimersByZone = {}
     for _, item in ipairs(payload.sorted) do
         if item and item.key then
-            local zoneID = parseZoneFromKey(item.key)
+            local zoneID = crateKeys:parseZone(item.key)
             if zoneID then
                 visibleTimersByZone[tostring(zoneID)] = copyTable(item)
             end
@@ -322,7 +297,7 @@ end
 function domainState:onActiveTimerRemoved(payload)
     if type(payload) ~= "table" then return end
 
-    local key = payload.key or makeKey(payload.zoneID, payload.shardID)
+    local key = payload.key or crateKeys:make(payload.zoneID, payload.shardID)
     if key then
         domainState:removeTimerByKey(key)
     end
@@ -342,12 +317,12 @@ end
 
 function domainState:snapshot()
     return {
-        lifecycleByKey            = lifecycleByKey,
-        currentLifecycleKeyByZone = currentLifecycleKeyByZone,
-        timerByKey                = timerByKey,
-        activeTimerKeyByZone      = activeTimerKeyByZone,
-        visibleTimersByZone       = visibleTimersByZone,
-        zoneShardStatusByZone     = zoneShardStatusByZone,
+        lifecycleByKey            = domainState:getLifecycleRecordsSnapshot(),
+        currentLifecycleKeyByZone = copyTable(currentLifecycleKeyByZone),
+        timerByKey                = domainState:getTimerRecordsSnapshot(),
+        activeTimerKeyByZone      = copyTable(activeTimerKeyByZone),
+        visibleTimersByZone       = copyIndex(visibleTimersByZone),
+        zoneShardStatusByZone     = copyIndex(zoneShardStatusByZone),
     }
 end
 

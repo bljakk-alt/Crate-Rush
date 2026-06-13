@@ -6,6 +6,7 @@ CrateRush.timerPolicy = timerPolicy
 
 local CRATE_SOURCE = CrateRush.CRATE_SOURCE
 local TIMER_ANCHOR_REASON = CrateRush.TIMER_ANCHOR_REASON
+local LEGACY_CRATE_CYCLE_ANCHOR_SOURCE = "MONSTER_SAY"
 
 local function resolveCrateZoneID(zoneID)
     if CrateRush.zoneResolver and CrateRush.zoneResolver.resolveCrateZoneID then
@@ -81,7 +82,8 @@ function timerPolicy:getAnchorTimingDebug(oldTimerStart, newTimerStart, frequenc
 end
 
 function timerPolicy:isAuthoritativeTimerSource(source)
-    return source == CRATE_SOURCE.MONSTER_SAY
+    return source == CRATE_SOURCE.CRATE_CYCLE_ANCHOR
+        or source == LEGACY_CRATE_CYCLE_ANCHOR_SOURCE
 end
 
 function timerPolicy:getTimerQualityForSource(source)
@@ -95,7 +97,7 @@ function timerPolicy:shouldResetTimerAnchor(record, zoneID, source, now)
     local cycleIndex, cycleAge, remaining = self:getCyclePosition(record.timerStart, now, frequency)
 
     if self:isAuthoritativeTimerSource(source) then
-        return true, TIMER_ANCHOR_REASON.MONSTER_SAY, 0, 0, frequency
+        return true, TIMER_ANCHOR_REASON.CRATE_CYCLE_ANCHOR, 0, 0, frequency
     end
 
     if not record.timerStart then
@@ -103,7 +105,7 @@ function timerPolicy:shouldResetTimerAnchor(record, zoneID, source, now)
     end
 
     local nextRollover = self:getNextRolloverTime(record.timerStart, now, frequency)
-    -- Non-monster evidence may only pull the anchor earlier toward the missed monster say.
+    -- Non-anchor evidence may only pull the timer earlier toward the missed cycle anchor.
     if nextRollover and now < nextRollover and cycleAge >= self:getLifecycleDetectionGuardianSeconds() then
         return true, TIMER_ANCHOR_REASON.EARLIER_THAN_ROLLOVER, 0, 0, frequency
     end
