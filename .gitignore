@@ -3,3 +3,5 @@
 helpers/
 tools/
 sync-live.ps1
+sync-live.ps1
+tools/lifecycle_timer_contract_check.py
