@@ -1,0 +1,5 @@
+.codex/
+.review/
+helpers/
+tools/
+sync-live.ps1
