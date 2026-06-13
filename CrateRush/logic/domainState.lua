@@ -247,9 +247,6 @@ function domainState:onCrateStateChanged(payload)
     local record = domainState:getOrCreateLifecycle(payload.zoneID, payload.shardID)
     if not record then return end
 
-    domainState:removeOtherLifecyclesForZone(payload.zoneID, payload.shardID)
-    domainState:setCurrentLifecycle(payload.zoneID, payload.shardID)
-
     record.zoneID = payload.zoneID
     record.shardID = payload.shardID
     record.state = payload.state

@@ -175,7 +175,7 @@ While this exception exists, debug must remain a one-way observer. It must not o
 - When `LANDED` is accepted, UI timing must stop showing drop and land ETA. The prediction location may remain visible while the landed crate can still be acted on.
 - When any claimed/closed state is accepted, prediction service publishes `predictionCleared`, and UI adapters must drop cached prediction display for that zone/shard.
 - Prediction chat messages must stay compact: show zone, compact coordinates, map pin, and drop/land ETA; do not include the words `War Crate`, shard ID, or route ID in the user-facing chat text.
-- During the current prediction testing phase, prediction announcements are local-only and must not send to party/raid chat or addon-to-addon comms until output configuration is finalized.
+- Prediction announcements use the same configured announcement sinks as other messages. Automatic group output must still obey the party/raid sink authority rules, while manual UI-triggered output may force group chat without using raid warning.
 - Placeholder-style configuration must be implemented in the announcement template layer, with tokens such as `%zone%`, `%shard%`, `%state%`, and `%coordinates%`.
 - Notification toggles are applied by the announcement output layer before de-duplication. Disabled states must not mutate crate lifecycle or timer state.
 - Delivery toggles are applied by announcement sinks through the config gateway.

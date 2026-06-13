@@ -6,6 +6,9 @@ CrateRush.shardChangedAnnouncements = shardChanged
 
 local DOMAIN_EVENT = CrateRush.DOMAIN_EVENT or {}
 local MESSAGE_ID = CrateRush.ANNOUNCEMENT_MESSAGE_ID or {}
+local COOLDOWN_SECONDS = CrateRush.TIMING.SHARD_CHANGED_ANNOUNCE_COOLDOWN_SECONDS or 60
+
+local lastAnnouncementByKey = {}
 
 local function debugLog(message)
     if CrateRush.debug and CrateRush.debug.log then
@@ -17,6 +20,13 @@ local function isEnabled()
     return CrateRush.announcementMessageConfig
         and CrateRush.announcementMessageConfig.isEnabled
         and CrateRush.announcementMessageConfig:isEnabled(MESSAGE_ID.SHARD_CHANGED)
+end
+
+local function nowSeconds()
+    if CrateRush.clock and CrateRush.clock.serverTime then
+        return CrateRush.clock:serverTime()
+    end
+    return GetServerTime and GetServerTime() or 0
 end
 
 local function getZoneName(zoneID, fallback)
@@ -51,6 +61,26 @@ local function buildTokens(payload)
     }
 end
 
+local function getAnnouncementKey(zoneID, oldShardID, newShardID)
+    return tostring(zoneID) .. ":" .. tostring(oldShardID) .. ">" .. tostring(newShardID)
+end
+
+local function shouldAnnounceShardChange(zoneID, oldShardID, newShardID)
+    local key = getAnnouncementKey(zoneID, oldShardID, newShardID)
+    local now = nowSeconds()
+    local last = lastAnnouncementByKey[key]
+    if last and (now - last) < COOLDOWN_SECONDS then
+        debugLog("dedup zone=" .. tostring(zoneID)
+            .. " old=" .. tostring(oldShardID)
+            .. " new=" .. tostring(newShardID)
+            .. " cooldown=" .. tostring(COOLDOWN_SECONDS))
+        return false
+    end
+
+    lastAnnouncementByKey[key] = now
+    return true
+end
+
 function shardChanged:onZoneShardChanged(payload)
     if not isEnabled() then return false end
     if type(payload) ~= "table" or not payload.zoneID then return false end
@@ -61,6 +91,7 @@ function shardChanged:onZoneShardChanged(payload)
     if CrateRush.crateKeys and CrateRush.crateKeys.sameShard and CrateRush.crateKeys:sameShard(oldShardID, newShardID) then
         return false
     end
+    if not shouldAnnounceShardChange(payload.zoneID, oldShardID, newShardID) then return false end
 
     local tokens = buildTokens(payload)
     local message = CrateRush.announcementMessageConfig

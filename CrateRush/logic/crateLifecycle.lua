@@ -11,7 +11,7 @@ local TIMER_REMOVE_REASON = CrateRush.TIMER_REMOVE_REASON
 local crateKeys = CrateRush.crateKeys
 
 local STATE_IDLE     = CRATE_STATE.IDLE
-local STATE_DETECTED = CRATE_STATE.DETECTED or CRATE_STATE.FLYING
+local STATE_DETECTED = CRATE_STATE.DETECTED
 local STATE_FLYING   = CRATE_STATE.FLYING
 local STATE_DROPPING = CRATE_STATE.DROPPING
 local STATE_LANDED   = CRATE_STATE.LANDED
@@ -162,7 +162,7 @@ local function removeOtherRecordsForZone(zoneID, shardID)
         or {}
 
     for _, item in ipairs(removed) do
-        CrateRush.debug:log("SHARDMAP REMOVED | key=" .. tostring(item.key)
+        CrateRush.logDebug("SHARDMAP REMOVED | key=" .. tostring(item.key)
             .. " reason=" .. TIMER_REMOVE_REASON.ZONE_SHARD_REPLACED)
     end
 end
@@ -403,7 +403,7 @@ function lifecycle:transition(zoneID, shardID, newState, dropX, dropY, source, s
         cycleAge = appliedCycleAge
         remaining = appliedRemaining
 
-        CrateRush.debug:log("SHARDMAP | zone=" .. tostring(zoneID)
+        CrateRush.logDebug("SHARDMAP | zone=" .. tostring(zoneID)
             .. " shard=" .. tostring(shardID)
             .. " state=" .. STATE_DETECTED
             .. " source=" .. tostring(source)
@@ -473,7 +473,7 @@ function lifecycle:transition(zoneID, shardID, newState, dropX, dropY, source, s
             remaining = appliedRemaining
         end
 
-        CrateRush.debug:log("SHARDMAP | zone=" .. tostring(zoneID)
+        CrateRush.logDebug("SHARDMAP | zone=" .. tostring(zoneID)
             .. " shard=" .. tostring(shardID)
             .. " state=" .. newState
             .. " source=" .. tostring(source)

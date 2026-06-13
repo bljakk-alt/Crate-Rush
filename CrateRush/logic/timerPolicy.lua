@@ -126,7 +126,7 @@ function timerPolicy:applyTimerLifecycle(record, zoneID, source, now)
         cycleAge = 0
         remaining = self:getFrequency(zoneID)
 
-        CrateRush.debug:log("TIMER ANCHOR | zone=" .. tostring(zoneID)
+        CrateRush.logDebug("TIMER ANCHOR | zone=" .. tostring(zoneID)
             .. " shard=" .. tostring(record.shardID)
             .. " source=" .. tostring(source)
             .. " quality=" .. tostring(record.timerQuality)

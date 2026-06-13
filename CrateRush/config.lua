@@ -4,6 +4,10 @@
 local config = {}
 CrateRush.config = config
 
+-- Release policy for v0.9.x: these outputs are intentionally always enabled.
+-- They are not user preferences yet, so config:get() returns these values before
+-- reading SavedVariables. Remove this table when global output toggles become
+-- real configuration controls.
 local FORCED_ON_SETTINGS = {
     showWarningFrame                          = true,
     announceToPartyRaid                       = true,

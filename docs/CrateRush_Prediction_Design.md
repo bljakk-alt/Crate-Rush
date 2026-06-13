@@ -454,15 +454,16 @@ This rule exists to avoid unnecessary late route locks when telemetry already sh
 
 Accepted predictions are announced through the normal announcement router using `PREDICTION_UPDATED`.
 
-Prediction announcements use the same announcement router as other crate announcements, but they are local-only until prediction output configuration is finalized:
+Prediction announcements use the same announcement router and configured sinks as other crate announcements:
 
 ```text
 debug window
 default chat frame
 warning frame
+party/raid chat when configured and allowed by sink authority rules
 ```
 
-They must not send to party/raid chat or addon-to-addon comms during this testing phase.
+Addon-to-addon prediction output remains sink-controlled and must not bypass the announcement router.
 
 Prediction chat output is de-duplicated by crate lifecycle and rounded drop location.
 The first accepted location is announced.

@@ -597,6 +597,7 @@ def run_source_shape_checks() -> list[str]:
         and "STATE_CLAIMED_BY_OPPOSITE_FACTION" in crate_lifecycle,
         "crateLifecycle must own landed-gone opposite-faction state closure from real vignette scans",
     )
+    require("STATE_DETECTED = CRATE_STATE.DETECTED or" not in crate_lifecycle, "crate lifecycle DETECTED state must not fall back to FLYING")
     passed.append("CRATE_STATE.DETECTED exists")
 
     require("shouldAcceptLifecycleDetection" not in shardmap, "old mixed guardian function must not return")
@@ -632,6 +633,7 @@ def run_source_shape_checks() -> list[str]:
     require("EARLIER_THAN_ROLLOVER" in crate, "timer anchor reasons must include earlier-than-rollover")
     require("getNextRolloverTime" in timer_policy and "TIMER_ANCHOR_REASON.EARLIER_THAN_ROLLOVER" in timer_policy, "non-monster lifecycle starts must use earlier-than-rollover timer policy")
     require("cycleAge >= self:getLifecycleDetectionGuardianSeconds()" in timer_policy, "non-monster timer movement must wait for guardian-aged cycle window")
+    require('CrateRush.debug:log("SHARDMAP' not in crate_lifecycle and 'CrateRush.debug:log("TIMER ANCHOR' not in timer_policy, "hot lifecycle/timer debug logs must use CrateRush.logDebug")
     passed.append("lifecycle start and timer policy are visibly separated")
 
     for debug_field in ("TIMER ANCHOR |", "oldStart=", "newStart=", "elapsed=", "cycles=", "cycleTime="):
@@ -739,6 +741,8 @@ def run_source_shape_checks() -> list[str]:
     require("CrateRush.comms.send" in announcement_addon_comm_sink, "addon comm sink must own future addon-to-addon output")
     require("crateKeys:make" in announce and "local function getCrateKey" not in announce, "announce service must use shared crate key helper")
     require("C_Map.GetMapInfo" not in announcement_templates and "CrateRush.zoneResolver:getCrateZoneName" in announcement_templates, "announcement templates must use zoneResolver for zone names")
+    shard_changed_announcements = read_source("logic/announcements/shardChanged.lua")
+    require("lastAnnouncementByKey" in shard_changed_announcements and "SHARD_CHANGED_ANNOUNCE_COOLDOWN_SECONDS" in shard_changed_announcements, "shard changed announcements must be de-duplicated by zone/shard transition")
     passed.append("announcements are lifecycle keyed")
 
     require("crateKeys:make" in db and "makeCrateKey" not in db, "storage must use the shared crate key helper")
@@ -1193,6 +1197,7 @@ def run_source_shape_checks() -> list[str]:
         "function domainState:onCrateStateChanged",
         "function domainState:onCrateSightingSeen",
     )
+    require("removeOtherLifecyclesForZone" not in crate_state_handler and "setCurrentLifecycle" not in crate_state_handler, "domainState:onCrateStateChanged must be passive field sync only")
     crate_seen_handler = source_section(
         domain_state,
         "function domainState:onCrateSightingSeen",
