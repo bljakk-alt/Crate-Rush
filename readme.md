@@ -24,7 +24,7 @@ All technical documentation is located in the **docs** folder.
 
 Start here:
 
-➡️ **[Documentation Index](docs/README.md)**
+➡️ **[Documentation Index](docs/readme.md)**
 
 The documentation includes:
 
@@ -57,10 +57,10 @@ CrateRush prioritises architectural consistency over rapid feature growth.
 ## Repository Structure
 
 ```text
-docs/       Documentation and design specifications
-gamedata/   Static game data
-ui/         User interface implementation
-tools/      Development utilities
+docs/                 Documentation and design specifications
+CrateRush/gamedata/   Static game data
+CrateRush/ui/         User interface implementation
+tools/                Development utilities
 ```
 
 ---
