@@ -1,4 +1,4 @@
-## Interface: 120005
+## Interface: 120005, 120007
 ## Title: Crate Rush
 ## Notes: War Mode crate tracker â€” spot the plane, beat the enemy to the drop.
 ## Author: bljakk

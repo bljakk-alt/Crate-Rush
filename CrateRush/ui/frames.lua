@@ -33,6 +33,12 @@ local uiColors = CrateRush.theme:getUIColors()
 local frame
 local currentStatus = SHARD_STATUS.UNKNOWN
 local lastHeaderModel
+local DEFAULT_POSITION = {
+    point         = "CENTER",
+    relativePoint = "CENTER",
+    x             = 0,
+    y             = 0,
+}
 
 local function withAlpha(color, alpha)
     if type(color) ~= "table" then return nil end
@@ -121,6 +127,47 @@ local function shouldShowWarmodeIndicator()
     return true
 end
 
+local function getSavedPosition()
+    local position = CrateRush.config
+        and CrateRush.config.get
+        and CrateRush.config:get("mainFramePosition", DEFAULT_POSITION)
+        or DEFAULT_POSITION
+
+    if type(position) ~= "table" or type(position.point) ~= "string" then
+        return DEFAULT_POSITION
+    end
+
+    return position
+end
+
+local function applySavedPosition()
+    if not frame then return end
+
+    local position = getSavedPosition()
+    frame:ClearAllPoints()
+    frame:SetPoint(
+        position.point or DEFAULT_POSITION.point,
+        UIParent,
+        position.relativePoint or position.point or DEFAULT_POSITION.relativePoint,
+        tonumber(position.x) or DEFAULT_POSITION.x,
+        tonumber(position.y) or DEFAULT_POSITION.y
+    )
+end
+
+local function savePosition()
+    if not frame or not CrateRush.config or not CrateRush.config.set then return end
+
+    local point, _, relativePoint, x, y = frame:GetPoint(1)
+    if not point then return end
+
+    CrateRush.config:set("mainFramePosition", {
+        point         = point,
+        relativePoint = relativePoint or point,
+        x             = tonumber(x) or 0,
+        y             = tonumber(y) or 0,
+    }, "mainFrame")
+end
+
 local function createButton(parent, iconPath)
     local button = CreateFrame("Button", nil, parent)
     button:SetSize(BUTTON_SIZE, BUTTON_SIZE)
@@ -161,12 +208,15 @@ local function createFrame()
 
     frame = CreateFrame("Frame", "CrateRushMainFrame", UIParent)
     frame:SetSize(FRAME_WIDTH, HEADER_HEIGHT)
-    frame:SetPoint("CENTER", UIParent, "CENTER")
+    applySavedPosition()
     frame:SetMovable(true)
     frame:EnableMouse(true)
     frame:RegisterForDrag("LeftButton")
     frame:SetScript("OnDragStart", frame.StartMoving)
-    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+    frame:SetScript("OnDragStop", function(self)
+        self:StopMovingOrSizing()
+        savePosition()
+    end)
     frame:SetClampedToScreen(true)
     frame:SetFrameStrata("MEDIUM")
 

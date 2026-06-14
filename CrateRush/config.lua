@@ -25,6 +25,12 @@ local DEFAULTS = {
     showTimerbars                        = true,
     showWarmodeIndicator                 = true,
     framesLocked                         = false,
+    mainFramePosition                    = {
+        point         = "CENTER",
+        relativePoint = "CENTER",
+        x             = 0,
+        y             = 0,
+    },
     announceToPartyRaid                  = true,
     announceToAddonComm                  = true,
     echoAnnouncementsToDefaultChatFrame  = true,

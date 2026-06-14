@@ -12,6 +12,12 @@ local DEFAULT_PROFILE = {
     enabled                    = true,
     showWarningFrame           = true,
     showTimerbars              = true,
+    mainFramePosition          = {
+        point         = "CENTER",
+        relativePoint = "CENTER",
+        x             = 0,
+        y             = 0,
+    },
     filterIDs                  = {},
     crateHistory               = {},
     zoneShards                 = {},

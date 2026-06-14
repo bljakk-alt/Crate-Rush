@@ -6,6 +6,9 @@ CrateRush.announcementTemplates = templates
 
 local CRATE_STATE = CrateRush.CRATE_STATE or {}
 local MESSAGE_ID = CrateRush.ANNOUNCEMENT_MESSAGE_ID or {}
+local TIMING = CrateRush.TIMING or {}
+local LANDED_ACTION_SECONDS = TIMING.LANDED_ACTION_SECONDS or 300
+local CLAIMED_LOOT_WINDOW_SECONDS = TIMING.CLAIMED_LOOT_WINDOW_SECONDS or 58
 
 local function getZoneName(zoneID)
     if not zoneID then return "Unknown" end
@@ -78,6 +81,64 @@ local function formatEta(seconds)
     return "~" .. tostring(minutes) .. "m" .. tostring(rest) .. "s"
 end
 
+local function formatDuration(seconds)
+    seconds = tonumber(seconds)
+    if not seconds then return nil end
+    seconds = math.max(0, math.floor(seconds + 0.5))
+    if seconds < 60 then return tostring(seconds) .. "s" end
+
+    local minutes = math.floor(seconds / 60)
+    local rest = seconds % 60
+    if rest == 0 then return tostring(minutes) .. "m" end
+    return tostring(minutes) .. "m" .. tostring(rest) .. "s"
+end
+
+local function nowSeconds()
+    if CrateRush.clock and CrateRush.clock.serverTime then
+        return CrateRush.clock:serverTime()
+    end
+    return nil
+end
+
+local function remainingFrom(startTime, duration)
+    startTime = tonumber(startTime)
+    duration = tonumber(duration)
+    local now = nowSeconds()
+    if not startTime or not duration or not now then return nil end
+    return math.max(0, duration - math.max(0, now - startTime))
+end
+
+local function isLootableClaim(state, payload)
+    if CrateRush.isCrateStateClaimedByMyFaction and CrateRush.isCrateStateClaimedByMyFaction(state) then
+        return true
+    end
+
+    local playerFaction = CrateRush.playerContext
+        and CrateRush.playerContext.getFactionKey
+        and CrateRush.playerContext:getFactionKey()
+        or nil
+    local claimedFaction = type(payload) == "table" and payload.claimedFaction or nil
+    local normalizedClaimed = CrateRush.normalizeFactionKey and CrateRush.normalizeFactionKey(claimedFaction) or nil
+
+    if not playerFaction or not normalizedClaimed then return false end
+    return normalizedClaimed == playerFaction
+end
+
+local function buildTimeTokens(state, payload)
+    payload = type(payload) == "table" and payload or {}
+
+    local timeToClaim = ""
+    local timeToLoot = ""
+
+    if state == CRATE_STATE.LANDED then
+        timeToClaim = formatDuration(remainingFrom(payload.landedAt or payload.lastSeenAt, LANDED_ACTION_SECONDS)) or ""
+    elseif isLootableClaim(state, payload) then
+        timeToLoot = formatDuration(remainingFrom(payload.claimedAt or payload.lastSeenAt, CLAIMED_LOOT_WINDOW_SECONDS)) or ""
+    end
+
+    return timeToClaim, timeToLoot
+end
+
 local function getMessageIDForState(state)
     if state == CRATE_STATE.DETECTED or state == CRATE_STATE.FLYING then
         return MESSAGE_ID.CRATE_DETECTED
@@ -146,6 +207,7 @@ end
 
 local function buildTokens(zoneName, shard, state, coordinates, mapPin, payload)
     local coords, finalMapPin = appendLocation(state, coordinates, mapPin)
+    local timeToClaim, timeToLoot = buildTimeTokens(state, payload)
 
     return {
         ["%zone%"]          = zoneName,
@@ -159,8 +221,8 @@ local function buildTokens(zoneName, shard, state, coordinates, mapPin, payload)
         ["%time_to_next%"]  = "",
         ["%time_to_drop%"]  = "",
         ["%time_to_land%"]  = "",
-        ["%time_to_claim%"] = "",
-        ["%time_to_loot%"]  = "",
+        ["%time_to_claim%"] = timeToClaim,
+        ["%time_to_loot%"]  = timeToLoot,
         ["%enemy_total%"]   = "",
         ["%healers%"]       = "",
     }

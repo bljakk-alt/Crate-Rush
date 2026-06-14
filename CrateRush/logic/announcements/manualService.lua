@@ -6,6 +6,9 @@ CrateRush.manualAnnouncementService = service
 
 local MESSAGE_ID = CrateRush.ANNOUNCEMENT_MESSAGE_ID or {}
 local COCKPIT_TRIGGER = CrateRush.ANNOUNCEMENT_COCKPIT_TRIGGER or {}
+local TIMING = CrateRush.TIMING or {}
+local LANDED_ACTION_SECONDS = TIMING.LANDED_ACTION_SECONDS or 300
+local CLAIMED_LOOT_WINDOW_SECONDS = TIMING.CLAIMED_LOOT_WINDOW_SECONDS or 58
 
 local function getZoneName(zoneID, fallback)
     if fallback and fallback ~= "" then return fallback end
@@ -34,6 +37,37 @@ local function formatEta(seconds)
     local rest = seconds % 60
     if rest == 0 then return tostring(minutes) .. "m" end
     return tostring(minutes) .. "m" .. tostring(rest) .. "s"
+end
+
+local function nowSeconds()
+    if CrateRush.clock and CrateRush.clock.serverTime then
+        return CrateRush.clock:serverTime()
+    end
+    return nil
+end
+
+local function remainingFrom(startTime, duration)
+    startTime = tonumber(startTime)
+    duration = tonumber(duration)
+    local now = nowSeconds()
+    if not startTime or not duration or not now then return nil end
+    return math.max(0, duration - math.max(0, now - startTime))
+end
+
+local function isLootableClaim(payload)
+    payload = type(payload) == "table" and payload or {}
+    if CrateRush.isCrateStateClaimedByMyFaction and CrateRush.isCrateStateClaimedByMyFaction(payload.state) then
+        return true
+    end
+
+    local playerFaction = CrateRush.playerContext
+        and CrateRush.playerContext.getFactionKey
+        and CrateRush.playerContext:getFactionKey()
+        or nil
+    local normalizedClaimed = CrateRush.normalizeFactionKey and CrateRush.normalizeFactionKey(payload.claimedFaction) or nil
+
+    if not playerFaction or not normalizedClaimed then return false end
+    return normalizedClaimed == playerFaction
 end
 
 local function remainingFromPrediction(payload, field)
@@ -65,6 +99,15 @@ end
 local function baseTokens(payload)
     payload = type(payload) == "table" and payload or {}
     local coords, pin = locationTokens(payload.zoneID, payload.dropX, payload.dropY)
+    local timeToClaim = ""
+    local timeToLoot = ""
+
+    if payload.state == CrateRush.CRATE_STATE.LANDED then
+        timeToClaim = formatEta(remainingFrom(payload.landedAt or payload.lastSeenAt, LANDED_ACTION_SECONDS)) or ""
+    elseif isLootableClaim(payload) then
+        timeToLoot = formatEta(remainingFrom(payload.claimedAt or payload.lastSeenAt, CLAIMED_LOOT_WINDOW_SECONDS)) or ""
+    end
+
     return {
         ["%zone%"]          = getZoneName(payload.zoneID, payload.zoneName),
         ["%shard%"]         = payload.shardID and tostring(payload.shardID) or "?",
@@ -76,8 +119,8 @@ local function baseTokens(payload)
         ["%time_to_next%"]  = "",
         ["%time_to_drop%"]  = "",
         ["%time_to_land%"]  = "",
-        ["%time_to_claim%"] = "",
-        ["%time_to_loot%"]  = "",
+        ["%time_to_claim%"] = timeToClaim,
+        ["%time_to_loot%"]  = timeToLoot,
         ["%claimed_by_faction%"] = "",
         ["%enemy_total%"]   = "",
         ["%healers%"]       = "",
