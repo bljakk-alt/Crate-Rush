@@ -2,7 +2,7 @@
 
 Status: Initial design baseline.
 
-Controlling guideline: `docs/CrateRush_Feature_Module_Guidelines.md`
+Controlling guideline: [CrateRush_Feature_Module_Guidelines.md](CrateRush_Feature_Module_Guidelines.md)
 
 ## 1. Purpose
 

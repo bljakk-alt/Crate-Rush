@@ -26,7 +26,7 @@
   <text x="90" y="104" text-anchor="end" class="layer">contract</text>
   <rect x="120" y="78" width="860" height="76" rx="8" fill="#fff6dd" stroke="#b88219" stroke-width="1"/>
   <text x="550" y="105" text-anchor="middle" class="boxTitle" fill="#73500d">Architecture gate</text>
-  <text x="550" y="126" text-anchor="middle" class="boxText" fill="#8b6314">Every future code change must match docs/CrateRush_Architecture_Rules_v5.md.</text>
+  <text x="550" y="126" text-anchor="middle" class="boxText" fill="#8b6314">Every future code change must match DOCS/architecture/CrateRush_Architecture_Rules_v5.md.</text>
   <text x="550" y="143" text-anchor="middle" class="boxText" fill="#8b6314">Open work is tracked in TODO files. Debug is temporarily excluded from violation checks.</text>
 
   <!-- Bootstrap -->

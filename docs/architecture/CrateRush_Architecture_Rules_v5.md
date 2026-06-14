@@ -4,10 +4,10 @@ World of Warcraft addon - War Mode crate tracker
 
 ## Companion Artifacts
 
-- SVG diagram: `docs/craterush_architecture_v5.svg`
-- Source notes: `docs/CrateRush_Architecture_Rules_v5.md`
-- Lifecycle/timer contract: `docs/Lifecycle_Timer_Contract.md`
-- Addon protocol design: `docs/CrateRush_Addon_Protocol_Design_v3.md`
+- SVG diagram: [craterush_architecture_v5.svg](craterush_architecture_v5.svg)
+- Source notes: [CrateRush_Architecture_Rules_v5.md](CrateRush_Architecture_Rules_v5.md)
+- Lifecycle/timer contract: [Lifecycle_Timer_Contract.md](Lifecycle_Timer_Contract.md)
+- Addon protocol design: [CrateRush_Addon_Protocol_Design_v3.md](../protocols/CrateRush_Addon_Protocol_Design_v3.md)
 - Contract checker: `tools/lifecycle_timer_contract_check.py`
 
 ## Architecture Contract

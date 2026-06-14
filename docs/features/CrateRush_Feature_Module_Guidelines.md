@@ -386,11 +386,11 @@ This rule applies to future changes as well as first implementation.
 
 Accepted or active feature documents:
 
-- `docs/CrateRush_EnemyPresence_Design_v1.md`
-- `docs/CrateRush_Queue_Detection_Design_v1.md`
-- `docs/CrateRush_Bounty_Detection_Design_v1.md`
-- `docs/CrateRush_Prediction_Design.md`
-- `docs/CrateRush_Addon_Protocol_Design_v3.md`
+- [CrateRush_EnemyPresence_Design_v1.md](CrateRush_EnemyPresence_Design_v1.md)
+- [CrateRush_Queue_Detection_Design_v1.md](CrateRush_Queue_Detection_Design_v1.md)
+- [CrateRush_Bounty_Detection_Design_v1.md](CrateRush_Bounty_Detection_Design_v1.md)
+- [CrateRush_Prediction_Design.md](CrateRush_Prediction_Design.md)
+- [CrateRush_Addon_Protocol_Design_v3.md](../protocols/CrateRush_Addon_Protocol_Design_v3.md)
 
 Missing or pending feature documents:
 
