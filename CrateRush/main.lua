@@ -3,7 +3,7 @@
 
 CrateRush = CrateRush or {}
 CrateRush.displayName = "Crate Rush"
-CrateRush.version = "0.9.0"
+CrateRush.version = "0.9.1"
 CrateRush.versionLabel = CrateRush.displayName .. " " .. CrateRush.version
 
 function CrateRush.logDebug(message)
@@ -167,6 +167,24 @@ local function subscribeConfigChanged()
     )
 end
 
+local function configureDebug()
+    return
+
+    if CrateRush.debug.applyFilters and CrateRush.storage and CrateRush.storage.getFilterIDs then
+        CrateRush.debug:applyFilters(CrateRush.storage:getFilterIDs())
+    end
+
+    if CrateRush.debug.applyState and CrateRush.config and CrateRush.config.get then
+        CrateRush.debug:applyState(CrateRush.config:get("debugState"))
+    end
+
+    if CrateRush.debug.setSaveCallback and CrateRush.config and CrateRush.config.set then
+        CrateRush.debug:setSaveCallback(function(state)
+            CrateRush.config:set("debugState", state, "debug")
+        end)
+    end
+end
+
 -- Register AceComm directly (no AceAddon mixin needed)
 local AceComm = LibStub("AceComm-3.0")
 AceComm:Embed(CrateRush)
@@ -188,14 +206,12 @@ local function onInitialize(addonName)
     end
 
     -- Apply persisted filter IDs immediately so debug log is filtered from the start
-    CrateRush.debug:applyFilters(CrateRush.storage:getFilterIDs())
-    CrateRush.debug:applyState(CrateRush.config:get("debugState"))
-    CrateRush.debug:setSaveCallback(function(state)
-        CrateRush.config:set("debugState", state, "debug")
-    end)
+    configureDebug()
 
     CrateRush.onDebugFilterChanged = function(filteredIDs)
-        CrateRush.storage:setFilterIDs(filteredIDs)
+        if CrateRush.storage and CrateRush.storage.setFilterIDs then
+            CrateRush.storage:setFilterIDs(filteredIDs)
+        end
     end
 
     -- Restore timers from saved history
@@ -289,9 +305,7 @@ end
 
 function CrateRush:SlashCommand(msg)
     local cmd = msg and msg:lower():match("^%s*(.-)%s*$") or ""
-    if cmd == "debug" then
-        CrateRush.debug:toggle()
-    elseif cmd == "config" then
+    if cmd == "config" then
         if CrateRush.configDialog then
             CrateRush.configDialog:toggle()
         end
@@ -302,7 +316,6 @@ function CrateRush:SlashCommand(msg)
     else
         CrateRush.logDebug(CrateRush.versionLabel)
         CrateRush.logDebug("  /cr config  - open configuration")
-        CrateRush.logDebug("  /cr debug   - toggle debug window")
         CrateRush.logDebug("  /cr display - toggle main display")
         CrateRush.logDebug("  /cr auto    - use detected player faction")
     end

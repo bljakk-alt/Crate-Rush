@@ -2,7 +2,7 @@
 ## Title: Crate Rush
 ## Notes: War Mode crate tracker â€” spot the plane, beat the enemy to the drop.
 ## Author: bljakk
-## Version: 0.9.0
+## Version: 0.9.1
 ## OptionalDeps: Ace3
 ## SavedVariables: CrateRushDB, CrateRushDebugDB
 ## DefaultState: enabled

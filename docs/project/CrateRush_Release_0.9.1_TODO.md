@@ -13,6 +13,7 @@ Purpose: track every meaningful fix or change made after `0.9.0`, so the next re
 - Pending crate cycle anchor is queued when the NPC announcement happens before shard confirmation.
 - Pending crate cycle anchor is replayed after shard confirmation.
 - Claimed-message placeholder timing was adjusted so `%time_to_loot%` and `%time_to_claim%` are available more reliably.
+- Startup no longer crashes if the debug module is absent or disabled in the release package.
 - Prediction route selection can lock earlier when one route angle is clearly better than the other candidates; strong angle second-route separation is configurable in Advanced and defaults to `> 1.85` degrees.
 - Prediction strong-angle evidence now survives same-cell plane holds, so a clearly winning route can reach the 2-tick stability rule instead of resetting to `stable=1`.
 - Flying confirmation at anchor was tightened after the false 2-tick anchor case.
