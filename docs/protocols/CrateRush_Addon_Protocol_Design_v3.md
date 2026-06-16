@@ -375,6 +375,7 @@ Rules:
 No fixed lifetime.
 No expiry timer.
 New leader token replaces old token.
+Ordinary member join/leave does not replace the token.
 No token means no sync.
 ```
 
@@ -405,21 +406,34 @@ If the player is not grouped, the protocol is inactive.
 
 ## 15. Group Context Changes
 
-The leader manages token replacement when the group context changes.
+The leader manages token replacement only when protocol authority changes.
 
-Relevant group context changes include:
+Authority context changes include:
 
 ```text
-party created
-raid created
-roster changed
-party converted to raid
-raid converted to party
-leader changed and this player became leader
+player became grouped and is the current leader
+leader changed and this player became the new leader
 leader reloads or reconnects while grouped
 ```
 
-When the leader detects a relevant context change and War Mode is active, the leader creates a new token and broadcasts it through `TOKEN_UPDATE`.
+When the current player is leader and detects an authority context change while War Mode is active, the leader creates a new token and broadcasts it through `TOKEN_UPDATE`.
+
+Ordinary roster membership changes are not authority changes.
+
+Examples of ordinary roster membership changes:
+
+```text
+member joined
+member left
+member rejoined
+raid member changed subgroup
+party converted to raid while leader stayed the same
+raid converted to party while leader stayed the same
+```
+
+Ordinary roster membership changes do not create a new token.
+
+Ordinary roster membership changes do not cause the leader to broadcast `TOKEN_UPDATE` to the group.
 
 Members do not manage token lifecycle themselves.
 
@@ -427,7 +441,19 @@ Members do not wipe the token on roster change by themselves.
 
 Members do not request a token on every roster change.
 
-For non-leaders, `GROUP_ROSTER_UPDATE` is passive. It must not reset token request attempts, wipe an existing token, or send `TOKEN_REQUEST`.
+For existing non-leaders, `GROUP_ROSTER_UPDATE` is passive. It must not reset token request attempts, wipe an existing token, or send `TOKEN_REQUEST` just because another member joined or left.
+
+If the local player changes from solo to grouped and is not leader, the player has no valid local group token for that group. The member may send `TOKEN_REQUEST` to the current leader if the request throttle and retry cap allow it.
+
+If the current leader changes, members wipe the old local token because the old token belonged to the previous leader authority context.
+
+After a leader change:
+
+```text
+new leader creates new groupToken
+new leader broadcasts TOKEN_UPDATE to PARTY or RAID
+members accept only if TOKEN_UPDATE senderGUID is the current leader GUID
+```
 
 Members keep the current token until a valid leader `TOKEN_UPDATE` replaces it, or until local state invalidates the protocol.
 
@@ -451,8 +477,8 @@ addon starts, reloads, or enters world while grouped before requesting or creati
 After local token wipe:
 
 ```text
-leader creates and broadcasts TOKEN_UPDATE
-member sends TOKEN_REQUEST to leader
+leader creates and broadcasts TOKEN_UPDATE if this player is the current leader
+member sends TOKEN_REQUEST to leader if this player is not leader and needs a token
 ```
 
 depending on player role.
@@ -490,6 +516,12 @@ This follows the fail closed rule. If no valid leader controlled token is availa
 
 `TOKEN_REQUEST` is sent by a non leader member who has no valid local token and needs the current leader to provide one.
 
+It means:
+
+```text
+Leader, please send me the current group token.
+```
+
 ### Sender
 
 ```text
@@ -519,6 +551,16 @@ player is not leader
 local groupToken is missing
 current leader can be resolved
 ```
+
+Common send triggers:
+
+```text
+local player joins a party or raid and has no groupToken
+addon starts, reloads, or enters world while grouped as non-leader and has no groupToken
+before sending a normal sync message when local groupToken is missing
+```
+
+Ordinary roster updates caused by other members joining or leaving are not token request triggers for existing members.
 
 ### Receiver Validation
 
@@ -551,7 +593,7 @@ There is no automatic background retry loop.
 
 However, lazy retry is allowed when the addon actually needs to send a normal sync message and has no token.
 
-`GROUP_ROSTER_UPDATE` is not a lazy retry trigger for non-leaders.
+`GROUP_ROSTER_UPDATE` caused only by other members joining or leaving is not a lazy retry trigger for existing non-leaders.
 
 Before sending a normal sync message:
 
@@ -601,6 +643,14 @@ It means:
 Update your local groupToken to this token.
 ```
 
+`TOKEN_UPDATE` contains the token value.
+
+Example:
+
+```text
+v=1;type=TOKEN_UPDATE;senderGUID=<leaderGUID>;token=<groupToken>
+```
+
 It covers both cases:
 
 ```text
@@ -637,9 +687,15 @@ Leader sends `TOKEN_UPDATE` when:
 new token is created
 token is replaced
 valid TOKEN_REQUEST is received
-group context changes
+leader authority changes
 leader enters/reloads while War Mode ON and grouped
 ```
+
+Leader does not broadcast `TOKEN_UPDATE` only because an ordinary member joined, left, or rejoined.
+
+When a valid `TOKEN_REQUEST` is received, the leader replies with `TOKEN_UPDATE` via `WHISPER` to the requester.
+
+When the local player becomes the new leader, the leader sends `TOKEN_UPDATE` via `PARTY` or `RAID` to the group.
 
 ### Fire and Forget
 

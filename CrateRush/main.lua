@@ -12,6 +12,26 @@ function CrateRush.logDebug(message)
     end
 end
 
+local function getChatPrefixColor()
+    local factionKey = CrateRush.playerContext
+        and CrateRush.playerContext.getFactionKey
+        and CrateRush.playerContext:getFactionKey()
+        or nil
+
+    if factionKey == "ALLIANCE" then
+        return "3fa7ff"
+    end
+    return "ff3b32"
+end
+
+function CrateRush:Print(message)
+    if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
+        DEFAULT_CHAT_FRAME:AddMessage("|cff" .. getChatPrefixColor() .. "CrateRush|r " .. tostring(message or ""))
+    else
+        CrateRush.logDebug("CrateRush " .. tostring(message or ""))
+    end
+end
+
 local function getAddonMetadata(addonName, field)
     if not addonName or not field then return nil end
 
@@ -90,8 +110,8 @@ local function warnWarModeOffIfNeeded()
     local message = "CrateRush is inactive because War Mode is off."
     if CrateRush.warningframe and CrateRush.warningframe.show then
         CrateRush.warningframe:show(message)
-    elseif DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-        DEFAULT_CHAT_FRAME:AddMessage("|cff3fa7ffCrateRush:|r " .. message)
+    elseif CrateRush.Print then
+        CrateRush:Print(message)
     end
 end
 
@@ -241,11 +261,7 @@ function CrateRush:OnConfigChanged(payload)
 end
 
 local function printCrateRushMessage(message)
-    if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-        DEFAULT_CHAT_FRAME:AddMessage("|cff3fa7ffCrateRush:|r " .. tostring(message))
-    else
-        CrateRush.logDebug("CrateRush: " .. tostring(message))
-    end
+    CrateRush:Print(message)
 end
 
 function CrateRush:SetFactionOverride(factionKey)

@@ -16,12 +16,13 @@ local ANGLE_MIN_DISTANCE = 0.001
 local ANGLE_SELECTION_MIN_ADVANTAGE_DEGREES = 2
 local ANGLE_SWITCH_MIN_ADVANTAGE_DEGREES = 2
 local STRONG_ANGLE_BEST_MAX_DEGREES = 1
-local STRONG_ANGLE_SECOND_MIN_DEGREES = 2
+local STRONG_ANGLE_SECOND_MIN_DEGREES = 1.85
 local STRONG_ANGLE_STABLE_TICKS = 2
 
 local activeByKey = {}
 local pendingLogByKey = {}
 local routeCandidateStateByKey = {}
+local currentCrateZoneID = nil
 
 local function debugLog(message)
     if CrateRush.debug and CrateRush.debug.log then
@@ -41,6 +42,13 @@ local function isEnabled()
         return CrateRush.config:getBoolean("modulePredictionEnabled", false)
     end
     return false
+end
+
+local function strongAngleSecondMinDegrees()
+    if CrateRush.config and CrateRush.config.getNumber then
+        return CrateRush.config:getNumber("strongAngleSecondMinDegrees", STRONG_ANGLE_SECOND_MIN_DEGREES)
+    end
+    return STRONG_ANGLE_SECOND_MIN_DEGREES
 end
 
 local function isTerminalState(state)
@@ -84,6 +92,12 @@ end
 
 local function toNumber(value)
     return value and tonumber(value) or nil
+end
+
+local function sameID(a, b)
+    a = toNumber(a)
+    b = toNumber(b)
+    return a ~= nil and b ~= nil and a == b
 end
 
 local function formatCoord(value)
@@ -309,6 +323,10 @@ local function firstRouteID(routeSet)
     return nil
 end
 
+local function hasRoute(routeSet, routeID)
+    return type(routeSet) == "table" and routeID ~= nil and routeSet[routeID] == true
+end
+
 local function getRouteAngle(routeID, candidate)
     local route = getRoute(routeID)
     return toNumber((candidate and candidate.angle) or (route and route.angle))
@@ -495,7 +513,7 @@ local function selectCandidate(key, candidates, cells, point)
                     and strongBestDelta
                     and strongSecondDelta
                     and strongBestDelta < STRONG_ANGLE_BEST_MAX_DEGREES
-                    and strongSecondDelta > STRONG_ANGLE_SECOND_MIN_DEGREES
+                    and strongSecondDelta > strongAngleSecondMinDegrees()
                 then
                     strongTicks = previous and previous.strongAngleRouteID == strongRouteID and ((previous.strongAngleTicks or 0) + 1) or 1
                     if strongTicks >= STRONG_ANGLE_STABLE_TICKS then
@@ -530,7 +548,14 @@ local function selectCandidate(key, candidates, cells, point)
             return selectFromRouteSet(candidateRouteSet, byRoute), "cell_intersection", 1, pointCount, observedAngle
         end
 
-        rememberRouteCandidates(key, candidateRouteSet, cells, point, pointCount, observedAngle)
+        local strongRouteID = previous and previous.strongAngleRouteID or nil
+        local strongTicks = previous and previous.strongAngleTicks or nil
+        if not hasRoute(candidateRouteSet, strongRouteID) then
+            strongRouteID = nil
+            strongTicks = nil
+        end
+
+        rememberRouteCandidates(key, candidateRouteSet, cells, point, pointCount, observedAngle, strongRouteID, strongTicks)
         return nil, pendingReason, candidateRouteCount, pointCount, observedAngle
     end
 
@@ -640,6 +665,7 @@ function prediction:clearAll(reason)
     if next(routeCandidateStateByKey) then hadState = true end
     pendingLogByKey = {}
     routeCandidateStateByKey = {}
+    currentCrateZoneID = nil
     if hadState then
         debugLog("cleared all reason=" .. tostring(reason))
     end
@@ -650,9 +676,17 @@ function prediction:onPlaneSighting(zoneID, sighting, trigger, planeConfirmed)
     if type(sighting) ~= "table" or sighting.vignetteType ~= VIGNETTE_TYPE.PLANE_FLYING then return false end
     if not sighting.hasPosition or not sighting.shardID then return false end
     if not isFlyingLifecycle(zoneID, sighting.shardID, planeConfirmed) then return false end
+    if sighting.rawMapID and not sameID(sighting.rawMapID, zoneID) then
+        debugLog("ignored zone=" .. tostring(zoneID)
+            .. " shard=" .. tostring(sighting.shardID)
+            .. " rawMapID=" .. tostring(sighting.rawMapID)
+            .. " reason=raw_map_coordinate_space")
+        return false
+    end
 
     local key = crateKeys and crateKeys:make(zoneID, sighting.shardID) or nil
     if not key then return false end
+    currentCrateZoneID = toNumber(zoneID) or zoneID
     clearOtherPredictionsForZone(zoneID, sighting.shardID, "shard_changed")
 
     local cells = self:getCellKeys(sighting.x, sighting.y)
@@ -749,8 +783,22 @@ function prediction:onCrateStateChanged(payload)
     end
 end
 
-function prediction:onZoneChanged()
-    self:clearAll("zone_changed")
+function prediction:onZoneChanged(crateZoneID, rawMapID)
+    if not crateZoneID then
+        self:clearAll("zone_changed")
+        return
+    end
+
+    if currentCrateZoneID and not sameID(currentCrateZoneID, crateZoneID) then
+        self:clearAll("zone_changed")
+        currentCrateZoneID = toNumber(crateZoneID) or crateZoneID
+        return
+    end
+
+    currentCrateZoneID = toNumber(crateZoneID) or crateZoneID
+    debugLog("kept zone=" .. tostring(crateZoneID)
+        .. " rawMapID=" .. tostring(rawMapID)
+        .. " reason=same_crate_zone")
 end
 
 function prediction:onPlayerEnteringWorld()

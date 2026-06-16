@@ -4,6 +4,10 @@
 local L = CrateRush.locale:NewLocale("CrateRush", "esES")
 if not L then return end
 
+-- Factions
+L["FACTION_HORDE"]         = "Horda"
+L["FACTION_ALLIANCE"]      = "Alianza"
+
 -- Addon Info
 L["ADDON_LOADED"]          = "CrateRush cargado. Escribe /cr para ayuda."
 

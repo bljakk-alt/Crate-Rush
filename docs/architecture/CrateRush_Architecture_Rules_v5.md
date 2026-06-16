@@ -159,7 +159,7 @@ While this exception exists, debug must remain a one-way observer. It must not o
 - Announcements are state driven.
 - `announce.lua` subscribes to `crateStateChanged`, performs per-lifecycle/state de-duplication, and delegates message building/routing.
 - State announcement de-duplication is persisted through the storage gateway by `zoneID + shardID + lifecycle key + state`, so `/reload` must not re-announce a crate state that was already announced for the same lifecycle.
-- `logic/announcements/templates.lua` owns user-facing announcement text, future placeholder expansion, and coordinate/map-pin insertion.
+- `logic/announcements/templates.lua` and `logic/announcements/messageConfig.lua` own user-facing announcement text, placeholder expansion, approved conditional blocks, and coordinate/map-pin insertion.
 - Announcement templates build one finalized user-facing message, including coordinates and map-pin links when configured. Party/raid sinks route that exact finalized message through `SendChatMessage`.
 - Announcement sinks must not maintain a second stripped/plain chat message variant; otherwise clickable map-pin behavior can diverge between local chat and party/raid output.
 - `logic/announcements/router.lua` owns fan-out to announcement sinks.
@@ -170,13 +170,16 @@ While this exception exists, debug must remain a one-way observer. It must not o
 - Prediction announcements are de-duplicated by lifecycle and drop location before map-pin message building. ETA-only changes must not create another chat announcement or reset the player's waypoint.
 - Prediction state updates are location-driven. After the first accepted prediction for a lifecycle, route-only or ETA-only changes must not publish another prediction update.
 - Prediction route selection is active only while the lifecycle is in the plane/flying prediction phase. After `DROPPING`, the selected prediction may remain as location/timing context, but route selection must not keep changing.
-- Prediction may use strong angle tie-break to resolve multiple remaining route candidates only when the best route is under 1.0 degree from observed movement, the second route is over 2.0 degrees away, and the same best route wins for 2 consecutive prediction ticks.
+- Prediction route lookup data must be generated offline from ordered route-point polylines. Each route contributes every rough/fine cell touched by its centerline path; optional corridor padding must be explicit generation input, not a runtime decision. Runtime consumes generated tables by lookup only and must not calculate route geometry or corridor padding live.
+- Prediction must clear on actual mapped crate-zone changes, not on raw subzone `ZONE_CHANGED_NEW_AREA` events. If the raw map changes but the crate-zone mapping stays the same, active prediction state is retained.
+- Prediction route matching must use main crate-zone map coordinates only. Plane sightings read from raw subzone coordinate space are ignored for route matching unless a verified transform to the main crate-zone coordinate space exists.
+- Prediction may use strong angle tie-break to resolve multiple remaining route candidates only when the best route is under 1.0 degree from observed movement, the second route is over the configured strong angle second-route threshold, default `1.85` degrees, and the same best route wins for 2 consecutive prediction ticks. Same-cell plane holds must not reset this strong-angle evidence while the winning route remains in the candidate set.
 - When `DROPPING` is accepted, UI timing must stop showing drop ETA and may continue tracking approximate land ETA from the real drop timestamp plus prediction fall duration.
 - When `LANDED` is accepted, UI timing must stop showing drop and land ETA. The prediction location may remain visible while the landed crate can still be acted on.
 - When any claimed/closed state is accepted, prediction service publishes `predictionCleared`, and UI adapters must drop cached prediction display for that zone/shard.
 - Prediction chat messages must stay compact: show zone, compact coordinates, map pin, and drop/land ETA; do not include the words `War Crate`, shard ID, or route ID in the user-facing chat text.
 - Prediction announcements use the same configured announcement sinks as other messages. Automatic group output must still obey the party/raid sink authority rules, while manual UI-triggered output may force group chat without using raid warning.
-- Placeholder-style configuration must be implemented in the announcement template layer, with tokens such as `%zone%`, `%shard%`, `%state%`, and `%coordinates%`.
+- Placeholder-style configuration must be implemented in the announcement template layer, with localized tokens such as `%zone%`, `%state%`, `%claimed_by_faction%`, English display variants such as `%zone_en%`, `%state_en%`, `%claimed_by_faction_en%`, and approved conditional blocks such as `%if_claimed_by_my_faction%...%endif%`.
 - Notification toggles are applied by the announcement output layer before de-duplication. Disabled states must not mutate crate lifecycle or timer state.
 - Delivery toggles are applied by announcement sinks through the config gateway.
 - When `DETECTED` is accepted, announce once per lifecycle: `War Crate Detected Flying`.

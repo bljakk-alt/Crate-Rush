@@ -16,6 +16,7 @@ New contributors should read the following documents before making changes:
 4. [Addon Protocol Design](protocols/CrateRush_Addon_Protocol_Design_v3.md)
 5. [UI Implementation Hard Rules](ui/CrateRush_UI_Implementation_Hard_Rules.md)
 6. [Feature Module Guidelines](features/CrateRush_Feature_Module_Guidelines.md)
+7. [User Manual](user/CrateRush_User_Manual.md)
 
 These documents form the core project contract.
 
@@ -48,6 +49,9 @@ Project
 ├── TODO
 ├── UI TODO
 └── Ambiguity Parking Lot
+
+User
+└── User Manual
 ```
 
 ---
@@ -212,6 +216,18 @@ Documents:
 - [Ambiguity Parking Lot](project/ambiguous.md)
 
 Contains intentionally deferred design decisions and unresolved topics.
+
+---
+
+# User Documentation
+
+Documents:
+
+- [User Manual](user/CrateRush_User_Manual.md)
+
+Purpose:
+
+Explains addon usage, UI actions, notifications, message templates, placeholders, conditional blocks, and examples.
 
 ---
 

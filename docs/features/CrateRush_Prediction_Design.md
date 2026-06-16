@@ -315,6 +315,32 @@ Runtime asks:
 
 This avoids live route geometry.
 
+### Route cell generation
+
+The route cell index is not a raw telemetry-point lookup. It is generated from ordered route polyline data.
+
+For each known route, the offline generator must first build the non-padded centerline cells from the full route path and store every rough/fine cell touched by each polyline segment.
+
+Required centerline rule:
+
+```text
+routePoints polyline -> every touched 1 x 1 fine cell -> matching 4 x 4 rough bucket
+```
+
+Optional corridor rule:
+
+```text
+route centerline/path +/- 1 map degree perpendicular to route direction
+```
+
+If corridor padding is enabled, padding is applied on the route normal, not by simply adding or subtracting one from x/y.
+
+For route data represented by a polyline, the generator must process every segment. A simple start-to-drop line is allowed only as a fallback when no ordered route points exist.
+
+The generated index must include all plausible route candidates for shared early route space. A fine cell touched by multiple route paths must not collapse to a single route just because only one telemetry sample happened to land inside that exact cell.
+
+Runtime still performs only cheap table lookup against this generated route-cell index. Runtime must not calculate route geometry, line distance, or route padding live.
+
 ### Route definitions
 
 ```lua
@@ -444,7 +470,7 @@ If several route candidates remain after angle filtering, the addon may accept t
 
 1. at least two plane points exist and a movement angle exists
 2. the closest candidate route angle differs from observed movement by less than 1.0 degree
-3. the second closest candidate route angle differs from observed movement by more than 2.0 degrees
+3. the second closest candidate route angle differs from observed movement by more than the configured strong angle second-route threshold, default `1.85` degrees
 4. the same closest route wins for 2 consecutive prediction ticks
 ```
 
@@ -497,10 +523,14 @@ Prediction stops if:
 CRATE_DROPPING detected
 CRATE_LANDED detected
 CRATE_CLAIMED detected
-zone changes
+normalized crate zone changes
 shard context changes
 session/reload invalidates lifecycle
 ```
+
+Raw subzone changes must not clear prediction if the mapped crate zone stays the same. For example, moving between Zul'Aman and Atal'Aman still belongs to the same crate-zone bucket and must keep the active prediction.
+
+Route matching may use only plane coordinates read from the main crate-zone map coordinate space. If the player is currently on a raw subzone map and the vignette position was read from that raw map, prediction must ignore that point unless a verified coordinate transform to the main crate-zone map exists.
 
 Prediction correction is allowed only under explicit mismatch conditions.
 
@@ -843,10 +873,11 @@ Unclean data should not blindly pollute timing averages.
 2. Export lifecycle and raw event XLSX.
 3. Build clean lifecycle dataset.
 4. Build route/drop clusters.
-5. Build route cell timing table.
-6. Export Lua model tables.
-7. Load generated tables in addon.
-8. Use cheap runtime lookup.
+5. Build route polyline centerline cells and route cell timing table.
+6. Optionally build explicit corridor padding if the model requires it.
+7. Export Lua model tables.
+8. Load generated tables in addon.
+9. Use cheap runtime lookup.
 ```
 
 ### Runtime performance rule

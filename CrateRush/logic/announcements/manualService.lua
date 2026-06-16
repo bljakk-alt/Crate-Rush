@@ -21,6 +21,16 @@ local function getZoneName(zoneID, fallback)
     return zoneID and tostring(zoneID) or "Unknown"
 end
 
+local function getZoneEnglishName(zoneID)
+    if CrateRush.zoneResolver and CrateRush.zoneResolver.getCrateZoneEnglishName then
+        return CrateRush.zoneResolver:getCrateZoneEnglishName(zoneID)
+    end
+    if CrateRush.getCrateZoneEnglishName then
+        return CrateRush.getCrateZoneEnglishName(zoneID)
+    end
+    return getZoneName(zoneID)
+end
+
 local function formatCoord(value)
     value = tonumber(value)
     if not value then return nil end
@@ -70,6 +80,70 @@ local function isLootableClaim(payload)
     return normalizedClaimed == playerFaction
 end
 
+local function claimedByFactionText(payload)
+    payload = type(payload) == "table" and payload or {}
+    if isLootableClaim(payload) then
+        local key = CrateRush.playerContext
+            and CrateRush.playerContext.getFactionKey
+            and CrateRush.playerContext:getFactionKey()
+            or nil
+        return CrateRush.resolveFactionName and CrateRush.resolveFactionName(key) or ""
+    end
+
+    if CrateRush.isCrateStateClaimedByOppositeFaction
+        and CrateRush.isCrateStateClaimedByOppositeFaction(payload.state)
+    then
+        local key = CrateRush.playerContext
+            and CrateRush.playerContext.getFactionKey
+            and CrateRush.playerContext:getFactionKey()
+            or nil
+        local oppositeKey = CrateRush.getOppositeFactionKey and CrateRush.getOppositeFactionKey(key) or nil
+        return CrateRush.resolveFactionName and CrateRush.resolveFactionName(oppositeKey) or ""
+    end
+
+    if payload.claimedFaction and CrateRush.resolveFactionName then
+        local factionKey = CrateRush.normalizeFactionKey and CrateRush.normalizeFactionKey(payload.claimedFaction) or nil
+        if factionKey then return CrateRush.resolveFactionName(factionKey) end
+    end
+    if payload.claimedFactionName then
+        local factionKey = CrateRush.normalizeFactionKey and CrateRush.normalizeFactionKey(payload.claimedFactionName) or nil
+        if factionKey and CrateRush.resolveFactionName then return CrateRush.resolveFactionName(factionKey) end
+    end
+    return ""
+end
+
+local function claimedByFactionEnglishText(payload)
+    payload = type(payload) == "table" and payload or {}
+    if isLootableClaim(payload) then
+        local key = CrateRush.playerContext
+            and CrateRush.playerContext.getFactionKey
+            and CrateRush.playerContext:getFactionKey()
+            or nil
+        return CrateRush.resolveFactionEnglishName and CrateRush.resolveFactionEnglishName(key) or ""
+    end
+
+    if CrateRush.isCrateStateClaimedByOppositeFaction
+        and CrateRush.isCrateStateClaimedByOppositeFaction(payload.state)
+    then
+        local key = CrateRush.playerContext
+            and CrateRush.playerContext.getFactionKey
+            and CrateRush.playerContext:getFactionKey()
+            or nil
+        local oppositeKey = CrateRush.getOppositeFactionKey and CrateRush.getOppositeFactionKey(key) or nil
+        return CrateRush.resolveFactionEnglishName and CrateRush.resolveFactionEnglishName(oppositeKey) or ""
+    end
+
+    if payload.claimedFaction and CrateRush.resolveFactionEnglishName then
+        local factionKey = CrateRush.normalizeFactionKey and CrateRush.normalizeFactionKey(payload.claimedFaction) or nil
+        if factionKey then return CrateRush.resolveFactionEnglishName(factionKey) end
+    end
+    if payload.claimedFactionName then
+        local factionKey = CrateRush.normalizeFactionKey and CrateRush.normalizeFactionKey(payload.claimedFactionName) or nil
+        if factionKey and CrateRush.resolveFactionEnglishName then return CrateRush.resolveFactionEnglishName(factionKey) end
+    end
+    return ""
+end
+
 local function remainingFromPrediction(payload, field)
     if type(payload) ~= "table" or payload[field] == nil then return nil end
     local remaining = tonumber(payload[field])
@@ -110,8 +184,11 @@ local function baseTokens(payload)
 
     return {
         ["%zone%"]          = getZoneName(payload.zoneID, payload.zoneName),
+        ["%zone_en%"]       = getZoneEnglishName(payload.zoneID),
+        ["%zone_english%"]  = getZoneEnglishName(payload.zoneID),
         ["%shard%"]         = payload.shardID and tostring(payload.shardID) or "?",
         ["%state%"]         = "",
+        ["%state_en%"]      = "",
         ["%coords%"]        = coords,
         ["%coordinates%"]   = coords,
         ["%map_pin%"]       = pin,
@@ -121,7 +198,8 @@ local function baseTokens(payload)
         ["%time_to_land%"]  = "",
         ["%time_to_claim%"] = timeToClaim,
         ["%time_to_loot%"]  = timeToLoot,
-        ["%claimed_by_faction%"] = "",
+        ["%claimed_by_faction%"] = claimedByFactionText(payload),
+        ["%claimed_by_faction_en%"] = claimedByFactionEnglishText(payload),
         ["%enemy_total%"]   = "",
         ["%healers%"]       = "",
     }
@@ -239,6 +317,7 @@ function service:announceState(statePayload, predictionPayload)
 
     local tokens = baseTokens(payload)
     tokens["%state%"] = humanState(payload.state)
+    tokens["%state_en%"] = humanState(payload.state)
     return send(messageID, tokens)
 end
 

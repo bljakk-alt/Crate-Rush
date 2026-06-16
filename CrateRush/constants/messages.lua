@@ -37,10 +37,13 @@ CrateRush.ANNOUNCEMENT_COCKPIT_TRIGGER = COCKPIT_TRIGGER
 
 CrateRush.ANNOUNCEMENT_PLACEHOLDERS = {
     "%zone%",
+    "%zone_en%",
+    "%zone_english%",
     "%shard%",
     "%old_shard%",
     "%new_shard%",
     "%state%",
+    "%state_en%",
     "%coords%",
     "%map_pin%",
     "%time_to_next%",
@@ -49,10 +52,18 @@ CrateRush.ANNOUNCEMENT_PLACEHOLDERS = {
     "%time_to_claim%",
     "%time_to_loot%",
     "%claimed_by_faction%",
+    "%claimed_by_faction_en%",
     "%my_faction%",
+    "%my_faction_en%",
     "%opposite_faction%",
+    "%opposite_faction_en%",
     "%enemy_total%",
     "%healers%",
+    "%if_claimed_by_my_faction%...%endif%",
+    "%if_claimed_by_opposite_faction%...%endif%",
+    "%if_location_available%...%endif%",
+    "%if_time_to_drop%...%endif%",
+    "%if_time_to_land%...%endif%",
 }
 
 local function keys(id)
@@ -114,13 +125,13 @@ local CATALOG = {
     message(
         MESSAGE_ID.CRATE_CLAIMED,
         "Crate Claimed",
-        "War Supply Crate claimed by %claimed_by_faction% in %zone% [shard %shard%]",
+        "War Supply Crate claimed by %claimed_by_faction% in %zone% [shard %shard%]%if_claimed_by_my_faction% lootable %time_to_loot%%endif%",
         true
     ),
     message(
         MESSAGE_ID.PREDICTION,
         "Prediction",
-        "Predicted drop in %zone% at %coords% %map_pin% drop %time_to_drop% land %time_to_land%",
+        "Predicted drop in %zone%%if_location_available% at %coords% %map_pin%%endif%%if_time_to_drop% drop %time_to_drop%%endif%%if_time_to_land% land %time_to_land%%endif%",
         true,
         { defaultChatFrame = false, warningFrame = false, partyRaid = false, raidWarning = false },
         {

@@ -37,15 +37,28 @@ local function getZoneName(zoneID, fallback)
     return zoneID and tostring(zoneID) or "Unknown"
 end
 
+local function getZoneEnglishName(zoneID)
+    if CrateRush.zoneResolver and CrateRush.zoneResolver.getCrateZoneEnglishName then
+        return CrateRush.zoneResolver:getCrateZoneEnglishName(zoneID)
+    end
+    if CrateRush.getCrateZoneEnglishName then
+        return CrateRush.getCrateZoneEnglishName(zoneID)
+    end
+    return getZoneName(zoneID)
+end
+
 local function buildTokens(payload)
     local oldShardID = payload.oldShardID or payload.previousShardID
     local newShardID = payload.newShardID or payload.shardID
     return {
         ["%zone%"] = getZoneName(payload.zoneID, payload.zoneName),
+        ["%zone_en%"] = getZoneEnglishName(payload.zoneID),
+        ["%zone_english%"] = getZoneEnglishName(payload.zoneID),
         ["%shard%"] = newShardID and tostring(newShardID) or "?",
         ["%old_shard%"] = oldShardID and tostring(oldShardID) or "?",
         ["%new_shard%"] = newShardID and tostring(newShardID) or "?",
         ["%state%"] = "",
+        ["%state_en%"] = "",
         ["%coords%"] = "",
         ["%coordinates%"] = "",
         ["%map_pin%"] = "",
@@ -56,6 +69,7 @@ local function buildTokens(payload)
         ["%time_to_claim%"] = "",
         ["%time_to_loot%"] = "",
         ["%claimed_by_faction%"] = "",
+        ["%claimed_by_faction_en%"] = "",
         ["%enemy_total%"] = "",
         ["%healers%"] = "",
     }

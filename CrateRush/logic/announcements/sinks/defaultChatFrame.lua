@@ -20,8 +20,8 @@ function sink:isEnabled(announcement)
 end
 
 function sink:send(announcement)
-    if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-        DEFAULT_CHAT_FRAME:AddMessage(announcement.message)
+    if CrateRush.Print then
+        CrateRush:Print(announcement.message)
         return true
     end
     return false

@@ -284,9 +284,6 @@ function crateHandler:onPlayerEnteringWorld(isInitialLogin, isReloadingUi)
 end
 
 function crateHandler:onZoneChanged()
-    if prediction and prediction.onZoneChanged then
-        prediction:onZoneChanged()
-    end
     local zoneContext = zoneResolver:getPlayerZoneContext()
     local mapID = zoneContext.rawMapID
     local crateZoneID = zoneContext.crateZoneID
@@ -295,6 +292,9 @@ function crateHandler:onZoneChanged()
         .. " zone=" .. tostring(zoneContext.rawZoneName)
         .. " crateZoneID=" .. tostring(crateZoneID)
         .. " crateZone=" .. tostring(crateZoneName))
+    if prediction and prediction.onZoneChanged then
+        prediction:onZoneChanged(crateZoneID, mapID)
+    end
     if crateZoneID then
         shardService:beginZone(crateZoneID)
     else

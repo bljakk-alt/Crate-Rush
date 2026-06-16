@@ -45,6 +45,16 @@ local function getZoneName(zoneID, fallback)
     return zoneID and tostring(zoneID) or "Unknown"
 end
 
+local function getZoneEnglishName(zoneID)
+    if CrateRush.zoneResolver and CrateRush.zoneResolver.getCrateZoneEnglishName then
+        return CrateRush.zoneResolver:getCrateZoneEnglishName(zoneID)
+    end
+    if CrateRush.getCrateZoneEnglishName then
+        return CrateRush.getCrateZoneEnglishName(zoneID)
+    end
+    return getZoneName(zoneID)
+end
+
 local function formatEta(seconds)
     seconds = tonumber(seconds)
     if not seconds then return "unknown" end
@@ -66,8 +76,11 @@ end
 local function buildTokens(item)
     return {
         ["%zone%"] = getZoneName(item.zoneID, item.zoneName),
+        ["%zone_en%"] = getZoneEnglishName(item.zoneID),
+        ["%zone_english%"] = getZoneEnglishName(item.zoneID),
         ["%shard%"] = item.shardID and tostring(item.shardID) or "?",
         ["%state%"] = "",
+        ["%state_en%"] = "",
         ["%coords%"] = "",
         ["%coordinates%"] = "",
         ["%map_pin%"] = "",
@@ -78,6 +91,7 @@ local function buildTokens(item)
         ["%time_to_claim%"] = "",
         ["%time_to_loot%"] = "",
         ["%claimed_by_faction%"] = "",
+        ["%claimed_by_faction_en%"] = "",
         ["%enemy_total%"] = "",
         ["%healers%"] = "",
     }

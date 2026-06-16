@@ -35,6 +35,9 @@ local function addFactionTokens(tokens)
     local myFaction = CrateRush.resolveFactionName
         and CrateRush.resolveFactionName(factionKey)
         or nil
+    local myFactionEnglish = CrateRush.resolveFactionEnglishName
+        and CrateRush.resolveFactionEnglishName(factionKey)
+        or nil
 
     local oppositeKey = CrateRush.getOppositeFactionKey
         and CrateRush.getOppositeFactionKey(factionKey)
@@ -43,12 +46,21 @@ local function addFactionTokens(tokens)
     local oppositeFaction = CrateRush.resolveFactionName
         and CrateRush.resolveFactionName(oppositeKey)
         or nil
+    local oppositeFactionEnglish = CrateRush.resolveFactionEnglishName
+        and CrateRush.resolveFactionEnglishName(oppositeKey)
+        or nil
 
     if tokens["%my_faction%"] == nil then
         tokens["%my_faction%"] = myFaction or ""
     end
+    if tokens["%my_faction_en%"] == nil then
+        tokens["%my_faction_en%"] = myFactionEnglish or ""
+    end
     if tokens["%opposite_faction%"] == nil then
         tokens["%opposite_faction%"] = oppositeFaction or ""
+    end
+    if tokens["%opposite_faction_en%"] == nil then
+        tokens["%opposite_faction_en%"] = oppositeFactionEnglish or ""
     end
 
     return tokens
@@ -63,6 +75,37 @@ local function addDefaultTokens(tokens)
     end
     return tokens
 end
+
+local function hasText(value)
+    value = tostring(value or "")
+    return value ~= "" and value ~= "?" and value ~= "unknown" and value ~= "location not available"
+end
+
+local function buildConditions(tokens)
+    local claimedBy = tostring(tokens["%claimed_by_faction%"] or "")
+    local myFaction = tostring(tokens["%my_faction%"] or "")
+    local oppositeFaction = tostring(tokens["%opposite_faction%"] or "")
+
+    return {
+        if_claimed_by_my_faction = claimedBy ~= "" and myFaction ~= "" and claimedBy == myFaction,
+        if_claimed_by_opposite_faction = claimedBy ~= "" and oppositeFaction ~= "" and claimedBy == oppositeFaction,
+        if_location_available = hasText(tokens["%coords%"]),
+        if_time_to_drop = hasText(tokens["%time_to_drop%"]),
+        if_time_to_land = hasText(tokens["%time_to_land%"]),
+    }
+end
+
+local function applyConditionalBlocks(template, tokens)
+    local conditions = buildConditions(tokens)
+    return tostring(template or ""):gsub("%%if_([%w_]+)%%(.-)%%endif%%", function(conditionName, content)
+        local key = "if_" .. tostring(conditionName or "")
+        if conditions[key] then
+            return content or ""
+        end
+        return ""
+    end)
+end
+
 local function cleanMessage(message)
     message = tostring(message or "")
     message = message:gsub("%s+", " ")
@@ -138,6 +181,7 @@ function messageConfig:format(messageID, tokens, fallbackTemplate)
     end
 
     if type(template) ~= "string" or template == "" then return nil end
+    template = applyConditionalBlocks(template, tokens)
 
     local message = template:gsub("%%[%w_]+%%", function(token)
         local value = tokens[token]

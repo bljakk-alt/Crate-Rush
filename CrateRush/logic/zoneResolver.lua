@@ -51,6 +51,20 @@ function zoneResolver:getCrateZoneName(mapID)
     return self:getMapName(crateZoneID)
 end
 
+function zoneResolver:getCrateZoneEnglishName(mapID)
+    if not mapID then return "Unknown" end
+
+    if CrateRush.zones and CrateRush.zones.getCrateZoneEnglishName then
+        return CrateRush.zones:getCrateZoneEnglishName(mapID)
+    end
+
+    if CrateRush.getCrateZoneEnglishName then
+        return CrateRush.getCrateZoneEnglishName(mapID)
+    end
+
+    return self:getCrateZoneName(mapID)
+end
+
 function zoneResolver:getPlayerMapID()
     if not C_Map or not C_Map.GetBestMapForUnit then return nil end
 

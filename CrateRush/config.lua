@@ -52,6 +52,7 @@ local DEFAULTS = {
     zoneShardPollDurationSeconds         = CrateRush.TIMING.ZONE_SHARD_POLL_DURATION_SECONDS,
     lifecycleDetectionGuardianSeconds    = CrateRush.TIMING.LIFECYCLE_DETECTION_GUARDIAN_SECONDS,
     timerMaxUnseenCycles                 = CrateRush.TIMING.TIMER_MAX_UNSEEN_CYCLES,
+    strongAngleSecondMinDegrees          = 1.85,
     shardConfirmCount                    = CrateRush.CRATE_DEFAULTS.SHARD_CONFIRM_COUNT,
     ambiguousShardConfirmCount           = CrateRush.CRATE_DEFAULTS.AMBIGUOUS_SHARD_CONFIRM_COUNT,
     debugState = {

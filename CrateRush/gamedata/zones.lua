@@ -33,6 +33,26 @@ CrateRush.ALLOWED_CRATE_ZONES = {
     [2444] = true, -- Slayer's Rise
 }
 
+CrateRush.CRATE_ZONE_ENGLISH_NAMES = {
+    [2022] = "The Waking Shores",
+    [2023] = "Ohn'ahran Plains",
+    [2024] = "The Azure Span",
+    [2025] = "Thaldraszus",
+    [2214] = "The Ringing Deeps",
+    [2215] = "Hallowfall",
+    [2248] = "Isle of Dorn",
+    [2255] = "Azj-Kahet",
+    [2346] = "Undermine",
+    [2369] = "Siren Isle",
+    [2371] = "K'aresh",
+    [2393] = "Silvermoon City",
+    [2395] = "Eversong Woods",
+    [2405] = "Voidstorm",
+    [2413] = "Harandar",
+    [2437] = "Zul'Aman",
+    [2444] = "Slayer's Rise",
+}
+
 local CRATE_ZONE_BY_MAP_ID = {
     -- Midnight
     [2405] = 2405, -- Voidstorm
@@ -158,6 +178,15 @@ function zones:getCrateZoneName(mapID)
     return (info and info.name) or tostring(crateZoneID)
 end
 
+function zones:getCrateZoneEnglishName(mapID)
+    local crateZoneID = self:resolveCrateZoneID(mapID) or toNumber(mapID)
+    if not crateZoneID then return "Unknown" end
+
+    return (CrateRush.CRATE_ZONE_ENGLISH_NAMES and CrateRush.CRATE_ZONE_ENGLISH_NAMES[crateZoneID])
+        or self:getCrateZoneName(crateZoneID)
+        or tostring(crateZoneID)
+end
+
 function CrateRush.resolveCrateZoneID(mapID)
     return zones:resolveCrateZoneID(mapID)
 end
@@ -168,4 +197,8 @@ end
 
 function CrateRush.getCrateZoneName(mapID)
     return zones:getCrateZoneName(mapID)
+end
+
+function CrateRush.getCrateZoneEnglishName(mapID)
+    return zones:getCrateZoneEnglishName(mapID)
 end

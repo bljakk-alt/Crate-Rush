@@ -69,24 +69,37 @@ local function getTimestamp()
     return string.format("%.3f", preciseNow)
 end
 
+local function safeText(value)
+    local ok, text = pcall(tostring, value)
+    if ok then return text end
+    return "<restricted>"
+end
+
+local function safeFind(text, pattern, init, plain)
+    local ok, result = pcall(string.find, text, pattern, init, plain)
+    return ok and result ~= nil
+end
+
 local function applyColor(msg)
-    if msg:find("%-> yellow") then
+    msg = safeText(msg or "")
+
+    if safeFind(msg, "%-> yellow") then
         return COLOR_STATUS_YELLOW .. msg .. COLOR_RESET
-    elseif msg:find("%-> red") then
+    elseif safeFind(msg, "%-> red") then
         return COLOR_STATUS_RED .. msg .. COLOR_RESET
-    elseif msg:find("%-> green") then
+    elseif safeFind(msg, "%-> green") then
         return COLOR_STATUS_GREEN .. msg .. COLOR_RESET
-    elseif msg:find("^ZONECHECK | CONFIRM_LOCK")
-        or msg:find("^ZONECHECK | APPLY_CONFIRMED")
+    elseif safeFind(msg, "^ZONECHECK | CONFIRM_LOCK")
+        or safeFind(msg, "^ZONECHECK | APPLY_CONFIRMED")
     then
         return COLOR_CONFIRM .. msg .. COLOR_RESET
-    elseif msg:find("^ANNOUNCE") then
+    elseif safeFind(msg, "^ANNOUNCE") then
         return COLOR_ANNOUNCE .. msg .. COLOR_RESET
-    elseif msg:find("^SHARDMAP") then
+    elseif safeFind(msg, "^SHARDMAP") then
         return COLOR_SHARDMAP .. msg .. COLOR_RESET
-    elseif msg:find("^  DUMP") then
+    elseif safeFind(msg, "^  DUMP") then
         return COLOR_DUMP .. msg .. COLOR_RESET
-    elseif msg:find("^|c") then
+    elseif safeFind(msg, "^|c") then
         -- already colored
         return msg
     end
@@ -398,11 +411,11 @@ function debug:log(msg)
     return
 
     if msg == nil then return end
-    msg = tostring(msg)
+    msg = safeText(msg)
 
     -- Filter by vignette ID
     for id, _ in pairs(filteredIDs) do
-        if msg:find(tostring(id), 1, true) then return end
+        if safeFind(msg, tostring(id), 1, true) then return end
     end
 
     local timestamp = getTimestamp()

@@ -9,11 +9,13 @@ CrateRush.FACTION = {
 CrateRush.FACTION_INFO = {
     [CrateRush.FACTION.HORDE] = {
         key  = CrateRush.FACTION.HORDE,
-        name = "Horde",
+        localeKey = "FACTION_HORDE",
+        fallbackName = "Horde",
     },
     [CrateRush.FACTION.ALLIANCE] = {
         key  = CrateRush.FACTION.ALLIANCE,
-        name = "Alliance",
+        localeKey = "FACTION_ALLIANCE",
+        fallbackName = "Alliance",
     },
 }
 
@@ -29,7 +31,20 @@ end
 
 function CrateRush.getFactionName(key)
     local faction = key and CrateRush.FACTION_INFO[key] or nil
-    return faction and faction.name or nil
+    if not faction then return nil end
+
+    local L = CrateRush.L
+    local localized = L and faction.localeKey and L[faction.localeKey] or nil
+    if localized and localized ~= faction.localeKey then
+        return localized
+    end
+
+    return faction.fallbackName
+end
+
+function CrateRush.getFactionEnglishName(key)
+    local faction = key and CrateRush.FACTION_INFO[key] or nil
+    return faction and faction.fallbackName or nil
 end
 
 function CrateRush.getFallbackFactionKey()
@@ -42,6 +57,10 @@ end
 
 function CrateRush.resolveFactionName(value)
     return CrateRush.getFactionName(CrateRush.resolveFactionKey(value))
+end
+
+function CrateRush.resolveFactionEnglishName(value)
+    return CrateRush.getFactionEnglishName(CrateRush.resolveFactionKey(value))
 end
 
 function CrateRush.getOppositeFactionKey(value)

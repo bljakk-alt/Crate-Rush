@@ -11,5 +11,7 @@ L["CRATE_DROPPING"]     = "War Supply Crate dropping in %s [shard %s]"
 L["CRATE_LANDED"]       = "War Supply Crate LANDED in %s [shard %s] - GO NOW!"
 L["CRATE_CLAIMED"]      = "War Supply Crate claimed in %s [shard %s]"
 L["NEXT_SPAWN"]         = "Next spawn in %s in approximately %d minutes."
+L["FACTION_HORDE"]      = "Horde"
+L["FACTION_ALLIANCE"]   = "Alliance"
 
 CrateRush.L = CrateRush.locale:GetLocale("CrateRush")

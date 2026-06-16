@@ -121,6 +121,7 @@ local SECTION_KEYS = {
         "zoneShardPollDurationSeconds",
         "lifecycleDetectionGuardianSeconds",
         "timerMaxUnseenCycles",
+        "strongAngleSecondMinDegrees",
     },
 }
 
@@ -165,8 +166,8 @@ local function resetCurrentSection()
     clearPendingValues()
     dialog:refresh()
 
-    if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-        DEFAULT_CHAT_FRAME:AddMessage("CrateRush configuration page reset.")
+    if CrateRush.Print then
+        CrateRush:Print("Configuration page reset.")
     end
 end
 local function getTheme()
@@ -449,17 +450,24 @@ local function makeRadio(parent, labelText, key, value, default, anchor, yOffset
     return radio
 end
 
-local function saveNumber(editBox, key, fallback)
+local function saveNumber(editBox, key, fallback, displayScale)
     local value = tonumber(editBox:GetText())
     if value then
+        if displayScale then
+            value = value / displayScale
+        end
         setPendingValue(key, value)
     else
-        editBox:SetText(tostring(getPendingNumber(key, fallback)))
+        value = getPendingNumber(key, fallback)
+        if displayScale then
+            value = math.floor((value * displayScale) + 0.5)
+        end
+        editBox:SetText(tostring(value))
     end
     editBox:ClearFocus()
 end
 
-local function makeNumber(parent, labelText, key, fallback, anchor, yOffset)
+local function makeNumber(parent, labelText, key, fallback, anchor, yOffset, displayScale)
     local row = CreateFrame("Frame", nil, parent)
     row:SetPoint("TOPLEFT", anchor, "BOTTOMLEFT", 0, yOffset or -12)
     row:SetPoint("RIGHT", parent, "RIGHT", -28, 0)
@@ -499,16 +507,16 @@ local function makeNumber(parent, labelText, key, fallback, anchor, yOffset)
     edit:SetJustifyH("CENTER")
     edit:SetFontObject("GameFontHighlight")
     edit:SetTextColor(0.92, 0.92, 0.94, 1)
-    edit:SetScript("OnEnterPressed", function(self) saveNumber(self, key, fallback) end)
+    edit:SetScript("OnEnterPressed", function(self) saveNumber(self, key, fallback, displayScale) end)
     edit:SetScript("OnEscapePressed", function(self) self:ClearFocus(); dialog:refresh() end)
-    edit:SetScript("OnEditFocusLost", function(self) saveNumber(self, key, fallback) end)
+    edit:SetScript("OnEditFocusLost", function(self) saveNumber(self, key, fallback, displayScale) end)
     edit:SetScript("OnEditFocusGained", function()
         local t = getTheme()
         local focus = t.accent or t.selectedBorder or t.selected
         wrapper:SetBackdropBorderColor(focus[1], focus[2], focus[3], focus[4] or 1)
     end)
     edit:SetScript("OnEditFocusLost", function(self)
-        saveNumber(self, key, fallback)
+        saveNumber(self, key, fallback, displayScale)
         local t = getTheme()
         local border = t.selectedBorder or t.selected
         wrapper:SetBackdropBorderColor(border[1], border[2], border[3], border[4] or 1)
@@ -517,7 +525,11 @@ local function makeNumber(parent, labelText, key, fallback, anchor, yOffset)
 
     addControl(function()
         if not edit:HasFocus() then
-            edit:SetText(tostring(getPendingNumber(key, fallback)))
+            local value = getPendingNumber(key, fallback)
+            if displayScale then
+                value = math.floor((value * displayScale) + 0.5)
+            end
+            edit:SetText(tostring(value))
         end
 
         local t = getTheme()
@@ -989,7 +1001,10 @@ local function buildAdvancedPage()
 
     local lifecycle = makeSubHeader(page, "Lifecycle And Timer", n5, -24)
     local n6 = makeNumber(page, "Lifecycle guardian seconds", "lifecycleDetectionGuardianSeconds", CrateRush.TIMING.LIFECYCLE_DETECTION_GUARDIAN_SECONDS, lifecycle, -16)
-    makeNumber(page, "Maximum unseen cycles", "timerMaxUnseenCycles", CrateRush.TIMING.TIMER_MAX_UNSEEN_CYCLES, n6, -14)
+    local n7 = makeNumber(page, "Maximum unseen cycles", "timerMaxUnseenCycles", CrateRush.TIMING.TIMER_MAX_UNSEEN_CYCLES, n6, -14)
+
+    local prediction = makeSubHeader(page, "Prediction", n7, -24)
+    makeNumber(page, "Strong angle second-route degrees x100", "strongAngleSecondMinDegrees", 1.85, prediction, -16, 100)
 end
 
 local function buildAboutPage()
@@ -1228,8 +1243,8 @@ local function createDialog()
 
         dialog:refresh()
 
-        if DEFAULT_CHAT_FRAME and DEFAULT_CHAT_FRAME.AddMessage then
-            DEFAULT_CHAT_FRAME:AddMessage("CrateRush configuration applied.")
+        if CrateRush.Print then
+            CrateRush:Print("Configuration applied.")
         end
     end)
 
