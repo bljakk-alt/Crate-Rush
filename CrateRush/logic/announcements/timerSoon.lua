@@ -45,6 +45,14 @@ local function getZoneName(zoneID, fallback)
     return zoneID and tostring(zoneID) or "Unknown"
 end
 
+local function getAnnouncementZoneName(zoneID, fallback)
+    local zoneName = getZoneName(zoneID, fallback)
+    if tonumber(zoneID) == 2437 then
+        return "Zul Aman"
+    end
+    return zoneName
+end
+
 local function getZoneEnglishName(zoneID)
     if CrateRush.zoneResolver and CrateRush.zoneResolver.getCrateZoneEnglishName then
         return CrateRush.zoneResolver:getCrateZoneEnglishName(zoneID)
@@ -75,7 +83,7 @@ end
 
 local function buildTokens(item)
     return {
-        ["%zone%"] = getZoneName(item.zoneID, item.zoneName),
+        ["%zone%"] = getAnnouncementZoneName(item.zoneID, item.zoneName),
         ["%zone_en%"] = getZoneEnglishName(item.zoneID),
         ["%zone_english%"] = getZoneEnglishName(item.zoneID),
         ["%shard%"] = item.shardID and tostring(item.shardID) or "?",
@@ -135,12 +143,17 @@ function timerSoon:onActiveTimerChanged(payload)
         local nextCycle = cycleIndex(item, now)
         if key and remaining and nextCycle and remaining <= leadSeconds then
             if announcedCycleByTimerKey[key] ~= nextCycle then
-                announcedCycleByTimerKey[key] = nextCycle
                 debugLog("announce zone=" .. tostring(item.zoneID)
                     .. " shard=" .. tostring(item.shardID)
                     .. " remaining=" .. tostring(math.floor(remaining + 0.5))
                     .. " lead=" .. tostring(leadSeconds))
-                routeTimerSoon(item)
+                if routeTimerSoon(item) then
+                    announcedCycleByTimerKey[key] = nextCycle
+                else
+                    debugLog("delivery_failed zone=" .. tostring(item.zoneID)
+                        .. " shard=" .. tostring(item.shardID)
+                        .. " remaining=" .. tostring(math.floor(remaining + 0.5)))
+                end
             end
         end
     end

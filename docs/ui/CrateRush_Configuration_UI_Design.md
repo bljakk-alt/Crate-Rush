@@ -155,17 +155,11 @@ Remark: Module specific settings will be decided during implementation.
 
 # 5. Integrations
 
-Purpose: External addon integrations. Current integration target is Hated Crate Tracker.
-
-- Enable integration
-
-- Receive data from Hated Crate Tracker
-
-- Send data to Hated Crate Tracker
+Purpose: External addon integrations. No external addon integrations are currently available.
 
 - Optional future fields: integration status, detected version, last communication
 
-Remark: Exact communication model and protocol details must be verified before implementation.
+Remark: Any future integration requires explicit design approval before implementation.
 
 # 6. Advanced
 

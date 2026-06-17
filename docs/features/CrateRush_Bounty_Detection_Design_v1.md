@@ -8,7 +8,7 @@ Controlling guideline: [CrateRush_Feature_Module_Guidelines.md](CrateRush_Featur
 
 Bounty Detection is a CrateRush feature module that detects enemy bounty player markers visible to the local player and announces that a bounty target is present on the current map.
 
-The feature is inspired by the RCT/HatedCrateTracker bounty hunter addon behavior, but it must be implemented as a separate CrateRush feature module, not as core crate lifecycle logic.
+Bounty Detection must be implemented as a separate CrateRush feature module, not as core crate lifecycle logic.
 
 Bounty Detection is not crate detection.
 
@@ -48,7 +48,7 @@ Bounty Detection v1 includes:
 - de-duplicate by vignette GUID for the active detection window
 - reset runtime state when the feature is disabled or the player context is reset
 
-RCT baseline behavior observed:
+Baseline API behavior:
 
 ```text
 VIGNETTES_UPDATED
@@ -59,14 +59,14 @@ C_VignetteInfo.GetVignettePosition(vignetteGUID, mapID)
 CrateRush.playerContext local faction
 ```
 
-RCT parses the vignette GUID and treats:
+Initial live-testing candidates:
 
 ```text
 2901 = Alliance bounty
 2902 = Horde bounty
 ```
 
-CrateRush v1 may use the same IDs as the starting rule. If live testing proves different IDs or additional IDs, update this document before changing implementation.
+CrateRush v1 may use these IDs as the starting rule. If live testing proves different IDs or additional IDs, update this document before changing implementation.
 
 Local player faction must come from player context. Bounty Detection must not call `UnitFactionGroup("player")` directly or choose a local faction fallback.
 
@@ -84,7 +84,6 @@ The following are out of scope for v1:
 - automatic raid marking
 - whispering players
 - CrateRush-native bounty addon-to-addon sync
-- RCT-compatible bounty addon-to-addon sync
 - changing crate lifecycle, timer lifecycle, guardian, shard, or prediction truth
 
 ## 5. User Rules
@@ -268,11 +267,8 @@ Bounty Detection v1 is local-output only.
 
 No CrateRush-native addon-to-addon bounty message is included in v1.
 
-No RCT-compatible bounty message is included in v1.
-
 Reason:
 
-- the RCT bounty file inspected does not send addon messages
 - local map visibility is enough for first implementation
 - protocol behavior should be designed separately if group sharing becomes desired
 
@@ -397,7 +393,7 @@ Bounty Detection v1 does not know whether the bounty target is still near the cr
 
 Bounty Detection v1 does not remove stale observations except through detection-window reset.
 
-Faction IDs are based on RCT behavior and must be confirmed with live CrateRush telemetry during implementation.
+Faction IDs must be confirmed with live CrateRush telemetry during implementation.
 
 The user primarily tests Horde characters, so Alliance-path testing may need later confirmation.
 

@@ -1,8 +1,8 @@
 ## Interface: 120005, 120007
 ## Title: Crate Rush
-## Notes: War Mode crate tracker â€” spot the plane, beat the enemy to the drop.
+## Notes: War Mode crate tracker: spot the plane, beat the enemy to the drop.
 ## Author: bljakk
-## Version: 0.9.2
+## Version: 0.9.4
 ## OptionalDeps: Ace3
 ## SavedVariables: CrateRushDB, CrateRushDebugDB
 ## DefaultState: enabled
@@ -114,6 +114,5 @@ ui/timerbars.lua
 ui/warningframe.lua
 
 # --- Integrations ---
-integrations/hatedCrateTracker.lua
 integrations/enemyPresence.lua
 integrations/queue.lua

@@ -1,5 +1,5 @@
 -- CrateRush
--- integrations/queue.lua — Queue snitch integration.
+-- integrations/queue.lua - Queue detection integration.
 
 local queue = {}
 CrateRush.integrations = CrateRush.integrations or {}

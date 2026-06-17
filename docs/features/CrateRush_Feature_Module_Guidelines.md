@@ -10,7 +10,7 @@ Feature modules include optional or semi-independent addon features such as:
 - Enemy Presence
 - Queue Detection
 - Bounty Detection
-- RCT compatibility
+- External addon compatibility only when explicitly approved
 - future crate hunting helpers
 
 Core lifecycle, timer, guardian, shard confirmation, and current-zone truth are not feature modules. They are core domain systems.
@@ -258,7 +258,7 @@ The design must state:
 
 - whether the feature syncs at all
 - whether it uses CrateRush native protocol
-- whether it supports an RCT/HatedCrateTracker compatibility message
+- whether it supports any explicitly approved third-party compatibility message
 - whether token validation is required
 - who may send
 - who may receive
@@ -394,4 +394,4 @@ Accepted or active feature documents:
 
 Missing or pending feature documents:
 
-- RCT compatibility design, if implemented separately from native protocol
+- third-party compatibility design, if explicitly approved separately from native protocol

@@ -64,7 +64,7 @@
   <rect x="60" y="490" width="290" height="190" class="tab"/>
   <text x="85" y="525" class="tabTitle">5. Integrations</text>
   <text x="85" y="560" class="item">External addon connections</text>
-  <text x="105" y="590" class="item">Hated Crate Tracker</text>
+  <text x="105" y="590" class="item">No integrations available</text>
   <text x="105" y="615" class="item">Receive data</text>
   <text x="105" y="640" class="item">Send data</text>
   <text x="85" y="665" class="note">Exact protocol to be verified</text>
@@ -96,7 +96,7 @@
   <rect x="60" y="735" width="1280" height="150" fill="#f7f9fc" stroke="#d6deea" stroke-width="2" rx="16"/>
   <text x="85" y="770" class="smallTitle">Open decisions to resolve during implementation</text>
   <text x="105" y="805" class="item">Notification layout, event enablement, per event vs global sounds, sound library</text>
-  <text x="105" y="832" class="item">Header contents, addon specific settings, Hated Crate Tracker protocol details</text>
+  <text x="105" y="832" class="item">Header contents, addon specific settings, future integration details</text>
   <text x="105" y="859" class="item">Advanced setting boundaries, About contents, possible Debug/developer mode</text>
 
   <text x="60" y="935" class="note">Rule: User facing UI stays user logical. Code may still map to services, modules, routers, adapters and constants internally.</text>

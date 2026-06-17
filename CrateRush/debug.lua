@@ -409,41 +409,6 @@ end
 
 function debug:log(msg)
     return
-
-    if msg == nil then return end
-    msg = safeText(msg)
-
-    -- Filter by vignette ID
-    for id, _ in pairs(filteredIDs) do
-        if safeFind(msg, tostring(id), 1, true) then return end
-    end
-
-    local timestamp = getTimestamp()
-    local colored = applyColor(msg)
-    local line = "[" .. timestamp .. "] " .. colored
-
-    -- Persist the same debug line that appears in the debug window.
-    -- Keep the window behaviour unchanged, this only adds SavedVariables history.
-    CrateRushDebugDB = CrateRushDebugDB or {}
-    table.insert(CrateRushDebugDB, {
-        epoch = CrateRush.clock and CrateRush.clock:serverTime() or nil,
-        uptime = getPreciseTime(),
-        timestamp = timestamp,
-        line = msg,
-        displayLine = line,
-    })
-    if #CrateRushDebugDB > MAX_SAVED_LINES then
-        table.remove(CrateRushDebugDB, 1)
-    end
-
-    table.insert(lines, line)
-    if #lines > MAX_LINES then
-        table.remove(lines, 1)
-    end
-
-    if frame and frame:IsShown() then
-        refreshDisplay()
-    end
 end
 
 function debug:toggle()

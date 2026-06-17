@@ -108,11 +108,7 @@ local SECTION_KEYS = {
         "moduleEnemyPresenceEnabled",
         "enemyPresenceRadiusYards",
     },
-    integrations = {
-        "integrationHatedCrateTrackerEnabled",
-        "integrationHatedCrateTrackerReceive",
-        "integrationHatedCrateTrackerSend",
-    },
+    integrations = {},
     advanced = {
         "shardConfirmCount",
         "ambiguousShardConfirmCount",
@@ -981,13 +977,7 @@ end
 
 local function buildIntegrationsPage()
     local page, line = createPage("integrations", "Integrations", "External addon connections.")
-    local hct = makeSubHeader(page, "Hated Crate Tracker", line, -22)
-    local i1 = makeCheckbox(page, "Enable integration (coming later)", "integrationHatedCrateTrackerEnabled", false, hct, -14)
-    local i2 = makeCheckbox(page, "Receive data from Hated Crate Tracker (coming later)", "integrationHatedCrateTrackerReceive", false, i1, -8)
-    local i3 = makeCheckbox(page, "Send data to Hated Crate Tracker (coming later)", "integrationHatedCrateTrackerSend", false, i2, -8)
-    markUnavailableControl(i1, "Enable integration (coming later)", "integrationHatedCrateTrackerEnabled")
-    markUnavailableControl(i2, "Receive data from Hated Crate Tracker (coming later)", "integrationHatedCrateTrackerReceive")
-    markUnavailableControl(i3, "Send data to Hated Crate Tracker (coming later)", "integrationHatedCrateTrackerSend")
+    makeSubHeader(page, "No integrations available", line, -22)
 end
 
 local function buildAdvancedPage()

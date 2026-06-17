@@ -13,7 +13,7 @@ CrateRush.DISPLAY_CRATE_ZONES = {
     2444, -- Slayer's Rise
 }
 
-CrateRush.ALLOWED_CRATE_ZONES = {
+CrateRush.CRATE_ZONE_ALLOWLIST = {
     [2248] = true, -- Isle of Dorn
     [2214] = true, -- Ringing Deeps
     [2215] = true, -- Hallowfall
@@ -62,7 +62,7 @@ local CRATE_ZONE_BY_MAP_ID = {
     [2576] = 2413, -- The Den -> Harandar
     [2395] = 2395, -- Eversong Woods
     [2437] = 2437, -- Zul'Aman
-    [2536] = 2437, -- Atal'Aman -> Zul'Aman (RCT comment: ZA)
+    [2536] = 2437, -- Atal'Aman -> Zul'Aman
 
     -- The War Within
     [2213] = 2255, -- City of Threads -> Azj-Kahet
@@ -103,8 +103,8 @@ end
 local function isAllowed(zoneID)
     zoneID = toNumber(zoneID)
     return zoneID ~= nil
-        and CrateRush.ALLOWED_CRATE_ZONES ~= nil
-        and CrateRush.ALLOWED_CRATE_ZONES[zoneID] == true
+        and CrateRush.CRATE_ZONE_ALLOWLIST ~= nil
+        and CrateRush.CRATE_ZONE_ALLOWLIST[zoneID] == true
 end
 
 local function cacheResult(rawMapID, crateZoneID)

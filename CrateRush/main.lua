@@ -169,20 +169,6 @@ end
 
 local function configureDebug()
     return
-
-    if CrateRush.debug.applyFilters and CrateRush.storage and CrateRush.storage.getFilterIDs then
-        CrateRush.debug:applyFilters(CrateRush.storage:getFilterIDs())
-    end
-
-    if CrateRush.debug.applyState and CrateRush.config and CrateRush.config.get then
-        CrateRush.debug:applyState(CrateRush.config:get("debugState"))
-    end
-
-    if CrateRush.debug.setSaveCallback and CrateRush.config and CrateRush.config.set then
-        CrateRush.debug:setSaveCallback(function(state)
-            CrateRush.config:set("debugState", state, "debug")
-        end)
-    end
 end
 
 -- Register AceComm directly (no AceAddon mixin needed)
