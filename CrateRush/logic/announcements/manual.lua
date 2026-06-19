@@ -60,3 +60,25 @@ function manual:send(message, messageID)
     end
     return delivered
 end
+
+function manual:sendGroupOnly(message, messageID)
+    if type(message) ~= "string" or message == "" then return false end
+    if messageID
+        and CrateRush.announcementMessageConfig
+        and CrateRush.announcementMessageConfig.isEnabled
+        and not CrateRush.announcementMessageConfig:isEnabled(messageID)
+    then
+        return false
+    end
+
+    local channel = getChannel()
+    if not channel then return false end
+
+    local ok, err = pcall(SendChatMessage, message, channel)
+    if ok then
+        debugLog("channel=" .. tostring(channel) .. " message=" .. message)
+        return true
+    end
+    debugLog("error=" .. tostring(err))
+    return false
+end

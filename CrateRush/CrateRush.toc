@@ -2,7 +2,7 @@
 ## Title: Crate Rush
 ## Notes: War Mode crate tracker: spot the plane, beat the enemy to the drop.
 ## Author: bljakk
-## Version: 0.9.4
+## Version: 0.9.4.1
 ## OptionalDeps: Ace3
 ## SavedVariables: CrateRushDB, CrateRushDebugDB
 ## DefaultState: enabled
@@ -105,6 +105,7 @@ ui/controlAtlas.lua
 ui/layout.lua
 ui/rounded.lua
 ui/surface.lua
+ui/tooltips.lua
 ui/model.lua
 ui/actions.lua
 ui/configDialog.lua

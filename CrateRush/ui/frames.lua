@@ -27,6 +27,7 @@ local WHITE_TEXTURE = "Interface/Buttons/WHITE8X8"
 local SHARD_STATUS = CrateRush.SHARD_STATUS
 local uiModel = CrateRush.uiModel
 local uiActions = CrateRush.uiActions
+local uiTooltips = CrateRush.tooltips
 local surface = CrateRush.surface
 local uiColors = CrateRush.theme:getUIColors()
 
@@ -195,12 +196,37 @@ local function updateShardBadge(status, shardID)
 
     local resolvedStatus = status or currentStatus or SHARD_STATUS.UNKNOWN
     local color = colorForStatus(resolvedStatus)
-    local shardText = shardID ~= nil and shardID ~= "" and tostring(shardID) or "--"
+    local hasShard = shardID ~= nil and shardID ~= ""
+    local shardText = hasShard and tostring(shardID) or nil
 
-    frame.shardBadgeText:SetText("Shard " .. shardText .. " - " .. statusText(resolvedStatus))
+    if hasShard then
+        frame.shardBadgeText:SetText(shardText .. " - " .. statusText(resolvedStatus))
+    else
+        frame.shardBadgeText:SetText("Shard syncing")
+    end
     setTextColor(frame.shardBadgeText, uiColors.neutral.textPrimary)
     setTextColor(frame.shardBadgeDot, color)
-    surface:setColors(frame.shardBadge, withAlpha(color, 0.14), withAlpha(color, 0.70))
+    surface:setColors(frame.shardBadge, { 0, 0, 0, 0 }, withAlpha(color, 0.70))
+end
+
+local function getShardBadgePayload()
+    local model = lastHeaderModel or {}
+    return {
+        zoneID = model.zoneID,
+        zoneName = model.zoneName or model.label,
+        shardID = model.shardID,
+        status = model.status or currentStatus,
+    }
+end
+
+local function previewShardBadge()
+    local service = CrateRush.manualAnnouncementService
+    return service and service.previewShardStatus and service:previewShardStatus(getShardBadgePayload()) or nil
+end
+
+local function announceShardBadge()
+    local service = CrateRush.manualAnnouncementService
+    return service and service.announceShardStatus and service:announceShardStatus(getShardBadgePayload()) or false
 end
 
 local function createFrame()
@@ -268,9 +294,24 @@ local function createFrame()
     })
     shardBadge:SetPoint("RIGHT", settingsButton, "LEFT", -SHARD_SETTINGS_GAP, 0)
     frame.shardBadge = shardBadge
+    shardBadge:SetScript("OnMouseDown", function(_, button)
+        if button == "LeftButton" and IsShiftKeyDown() then
+            announceShardBadge()
+        end
+    end)
+    shardBadge:SetScript("OnEnter", function(self)
+        if not uiTooltips then return end
+        local body = previewShardBadge()
+        uiTooltips:show(self, "Shard", body, {
+            showShiftClick = body ~= nil and body ~= "",
+        })
+    end)
+    shardBadge:SetScript("OnLeave", function()
+        if uiTooltips then uiTooltips:hide() end
+    end)
 
     local shardBadgeDot = shardBadge:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    shardBadgeDot:SetPoint("LEFT", shardBadge, "LEFT", 10, 0)
+    shardBadgeDot:SetPoint("LEFT", shardBadge, "LEFT", 14, 0)
     shardBadgeDot:SetText("\226\151\143")
     applyFontSize(shardBadgeDot, 13, nil)
     shardBadgeDot:SetShadowColor(0, 0, 0, 0)
@@ -278,7 +319,7 @@ local function createFrame()
 
     local shardBadgeText = shardBadge:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
     shardBadgeText:SetPoint("LEFT", shardBadgeDot, "RIGHT", 6, 0)
-    shardBadgeText:SetPoint("RIGHT", shardBadge, "RIGHT", -9, 0)
+    shardBadgeText:SetPoint("RIGHT", shardBadge, "RIGHT", -6, 0)
     shardBadgeText:SetJustifyH("LEFT")
     applyFontSize(shardBadgeText, 9, nil)
     frame.shardBadgeText = shardBadgeText
@@ -386,16 +427,18 @@ function frames:renderHeader(headerModel)
     updateShardBadge(currentStatus, headerModel.shardID)
 end
 
-function frames:setZoneShard(zoneName, shardID, status)
+function frames:setZoneShard(zoneName, shardID, status, zoneID)
     local headerModel
     if uiModel and uiModel.formatHeader then
         headerModel = uiModel:formatHeader({
+            zoneID = zoneID,
             zoneName = zoneName,
             shardID = shardID,
             status = status,
         })
     else
         headerModel = {
+            zoneID = zoneID,
             zoneName = zoneName or "Unknown",
             shardID = shardID,
             status = status,
@@ -422,7 +465,7 @@ end
 
 local function onZoneShardStatusChanged(payload)
     if type(payload) ~= "table" then return end
-    frames:setZoneShard(payload.zoneName, payload.shardID, payload.status)
+    frames:setZoneShard(payload.zoneName, payload.shardID, payload.status, payload.zoneID)
 end
 
 if CrateRush.domainEvents and CrateRush.DOMAIN_EVENT then

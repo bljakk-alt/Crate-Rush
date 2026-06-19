@@ -16,6 +16,13 @@ local function dispatchEnemyPresence(event, ...)
     end
 end
 
+local function isInAllowedCrateZone()
+    if not CrateRush.zoneResolver or not CrateRush.zoneResolver.getPlayerCrateZoneID then
+        return false
+    end
+    return CrateRush.zoneResolver:getPlayerCrateZoneID() ~= nil
+end
+
 eventFrame:SetScript("OnEvent", function(self, event, ...)
     if event == CrateRush.EVT.PLAYER_ENTERING_WORLD then
         if CrateRush.playerContext and CrateRush.playerContext.onPlayerEnteringWorld then
@@ -24,17 +31,23 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         if CrateRush.comms and CrateRush.comms.onPlayerEnteringWorld then
             CrateRush.comms:onPlayerEnteringWorld(...)
         end
-        CrateRush.crateHandler:onPlayerEnteringWorld(...)
-        dispatchEnemyPresence(event, ...)
+        if isInAllowedCrateZone() then
+            CrateRush.crateHandler:onPlayerEnteringWorld(...)
+            dispatchEnemyPresence(event, ...)
+        end
     elseif event == CrateRush.EVT.ZONE_CHANGED_NEW_AREA then
         if CrateRush.playerContext and CrateRush.playerContext.onZoneChanged then
             CrateRush.playerContext:onZoneChanged(...)
         end
-        dispatchEnemyPresence(event, ...)
-        CrateRush.crateHandler:onZoneChanged()
+        if isInAllowedCrateZone() then
+            dispatchEnemyPresence(event, ...)
+            CrateRush.crateHandler:onZoneChanged()
+        end
     elseif event == CrateRush.EVT.VIGNETTES_UPDATED then
+        if not isInAllowedCrateZone() then return end
         CrateRush.crateHandler:onVignettesUpdated()
     elseif event == CrateRush.EVT.GROUP_ROSTER_UPDATE then
+        if not isInAllowedCrateZone() then return end
         if CrateRush.comms and CrateRush.comms.onGroupRosterUpdate then
             CrateRush.comms:onGroupRosterUpdate(...)
         end
@@ -47,10 +60,14 @@ eventFrame:SetScript("OnEvent", function(self, event, ...)
         if CrateRush.comms and CrateRush.comms.refreshProtocolContext then
             CrateRush.comms:refreshProtocolContext("player_flags_changed")
         end
-        dispatchEnemyPresence(event, ...)
+        if isInAllowedCrateZone() then
+            dispatchEnemyPresence(event, ...)
+        end
     elseif event == CrateRush.EVT.NPC_ANNOUNCEMENT then
+        if not isInAllowedCrateZone() then return end
         CrateRush.crateHandler:onNpcAnnouncement(...)
     elseif event == CrateRush.EVT.NAME_PLATE_UNIT_ADDED then
+        if not isInAllowedCrateZone() then return end
         dispatchEnemyPresence(event, ...)
     end
 end)

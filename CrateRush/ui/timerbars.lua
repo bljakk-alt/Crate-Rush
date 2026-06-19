@@ -12,9 +12,15 @@ local ROW_SPACING = TIMER_LAYOUT.rowSpacing or 10
 local ROW_TOP_GAP = TIMER_LAYOUT.rowTopGap or 14
 local LABEL_LEFT = (TIMER_LAYOUT.labelLeftPadding or 30) - 3
 local LABEL_TOP = TIMER_LAYOUT.labelTopPadding or 16
+local LABEL_Y_OFFSET = TIMER_LAYOUT.labelYOffset or 0
+local UNSEEN_Y_OFFSET = TIMER_LAYOUT.unseenYOffset or 0
+local TOP_ROW_HEIGHT = TIMER_LAYOUT.topRowHeight or 17
 local TIME_RIGHT = TIMER_LAYOUT.timerTextRightPadding or 22
 local TIME_WIDTH = TIMER_LAYOUT.timerTextWidth or 72
-local UNSEEN_WIDTH = TIME_WIDTH + 36
+local TIMER_FONT_SIZE = TIMER_LAYOUT.timerFontSize or 14
+local UNSEEN_WIDTH = TIMER_LAYOUT.unseenTextWidth or (TIME_WIDTH + 42)
+local UNSEEN_TIME_GAP = TIMER_LAYOUT.unseenTimeGap or 3
+local LABEL_UNSEEN_GAP = TIMER_LAYOUT.labelUnseenGap or 8
 local BAR_LEFT = (TIMER_LAYOUT.barLeftPadding or 30) - 3
 local BAR_RIGHT = (TIMER_LAYOUT.barRightPadding or 110) + 3
 local BAR_HEIGHT = TIMER_LAYOUT.barHeight or 14
@@ -26,6 +32,7 @@ local uiColors = CrateRush.theme:getUIColors()
 local surface = CrateRush.surface
 local uiModel = CrateRush.uiModel
 local uiActions = CrateRush.uiActions
+local uiTooltips = CrateRush.tooltips
 local URGENT_SECONDS = (CrateRush.TIMING and CrateRush.TIMING.TIMERBAR_URGENT_SECONDS) or 0
 local WARNING_SECONDS = (CrateRush.TIMING and CrateRush.TIMING.TIMERBAR_WARNING_SECONDS) or 0
 local URGENT_FLASH_INTERVAL = 0.45
@@ -68,6 +75,12 @@ end
 local function formatTime(seconds)
     seconds = math.max(0, math.floor(tonumber(seconds) or 0))
     return string.format("%02d:%02d", math.floor(seconds / 60), seconds % 60)
+end
+
+local function setFontSize(fontString, size)
+    if not fontString or not size then return end
+    local font, _, flags = fontString:GetFont()
+    fontString:SetFont(font or STANDARD_TEXT_FONT, size, flags)
 end
 
 local function colorForRow(row)
@@ -191,16 +204,21 @@ local function createBar(key)
     row.strip = strip
 
     local label = row:CreateFontString(nil, "OVERLAY", "GameFontNormal")
-    label:SetPoint("TOPLEFT", row, "TOPLEFT", LABEL_LEFT, -LABEL_TOP)
-    label:SetPoint("RIGHT", row, "RIGHT", -(TIME_WIDTH + TIME_RIGHT + 8), 0)
+    label:SetPoint("TOPLEFT", row, "TOPLEFT", LABEL_LEFT, -(LABEL_TOP + LABEL_Y_OFFSET))
+    label:SetPoint("RIGHT", row, "RIGHT", -(TIME_WIDTH + UNSEEN_WIDTH + TIME_RIGHT + UNSEEN_TIME_GAP + LABEL_UNSEEN_GAP), 0)
+    label:SetHeight(TOP_ROW_HEIGHT)
     label:SetJustifyH("LEFT")
+    label:SetJustifyV("BOTTOM")
     label:SetTextColor(uiColors.neutral.textPrimary[1], uiColors.neutral.textPrimary[2], uiColors.neutral.textPrimary[3], 1)
     row.label = label
 
     local timeText = row:CreateFontString(nil, "OVERLAY", "GameFontHighlightLarge")
-    timeText:SetPoint("RIGHT", row, "RIGHT", -TIME_RIGHT, 0)
+    timeText:SetPoint("TOPRIGHT", row, "TOPRIGHT", -TIME_RIGHT, -LABEL_TOP)
     timeText:SetWidth(TIME_WIDTH)
+    timeText:SetHeight(TOP_ROW_HEIGHT)
     timeText:SetJustifyH("RIGHT")
+    timeText:SetJustifyV("BOTTOM")
+    setFontSize(timeText, TIMER_FONT_SIZE)
     timeText:SetTextColor(uiColors.neutral.textTimer[1], uiColors.neutral.textTimer[2], uiColors.neutral.textTimer[3], 1)
     row.timeText = timeText
 
@@ -214,9 +232,11 @@ local function createBar(key)
     row.track = track
 
     local unseenText = row:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-    unseenText:SetPoint("BOTTOMRIGHT", row, "BOTTOMRIGHT", -TIME_RIGHT, 4)
+    unseenText:SetPoint("TOPRIGHT", row, "TOPRIGHT", -(TIME_RIGHT + TIME_WIDTH + UNSEEN_TIME_GAP), -(LABEL_TOP + UNSEEN_Y_OFFSET))
     unseenText:SetWidth(UNSEEN_WIDTH)
+    unseenText:SetHeight(TOP_ROW_HEIGHT)
     unseenText:SetJustifyH("RIGHT")
+    unseenText:SetJustifyV("BOTTOM")
     local unseenFont, unseenSize, unseenFlags = unseenText:GetFont()
     unseenText:SetFont(unseenFont or STANDARD_TEXT_FONT, math.max(8, (tonumber(unseenSize) or 10) - 1), unseenFlags)
     unseenText:SetTextColor(0.62, 0.68, 0.74, 0.88)
@@ -237,6 +257,26 @@ local function createBar(key)
         elseif button == "RightButton" and IsShiftKeyDown() and self.key then
             requestTimerRemoval(self.key)
         end
+    end)
+    row:SetScript("OnEnter", function(self)
+        if not uiTooltips then return end
+        local display = self.display
+        local title = display and (display.zoneName or display.label) or "Timer"
+        local body = nil
+        local showShiftClick = true
+        if display and display.noData then
+            body = "No timer data available."
+            showShiftClick = false
+        elseif CrateRush.manualAnnouncementService and CrateRush.manualAnnouncementService.previewTimerRow then
+            body = CrateRush.manualAnnouncementService:previewTimerRow(display)
+            showShiftClick = body ~= nil and body ~= ""
+        end
+        uiTooltips:show(self, title, body, {
+            showShiftClick = showShiftClick,
+        })
+    end)
+    row:SetScript("OnLeave", function()
+        if uiTooltips then uiTooltips:hide() end
     end)
 
     bars[key] = row
@@ -305,7 +345,9 @@ local function renderRow(row, display)
     row.timeText:SetText(display.timeText or formatTime(display.remaining or 0))
     row.unseenText:SetText(display.unseenText or "")
     if display.noData then
-        row.label:SetPoint("TOPLEFT", row, "TOPLEFT", LABEL_LEFT, -LABEL_TOP)
+        row.label:ClearAllPoints()
+        row.label:SetPoint("TOPLEFT", row, "TOPLEFT", LABEL_LEFT, -(LABEL_TOP + LABEL_Y_OFFSET))
+        row.label:SetHeight(TOP_ROW_HEIGHT)
         row.timeText:ClearAllPoints()
         row.timeText:SetPoint("CENTER", row, "CENTER", 0, 0)
         row.timeText:SetWidth(rowWidth - 40)
@@ -314,10 +356,23 @@ local function renderRow(row, display)
         row.timeText:SetTextColor(0.45, 0.50, 0.56, 0.80)
         row.unseenText:Hide()
     else
+        row.label:ClearAllPoints()
+        row.label:SetPoint("TOPLEFT", row, "TOPLEFT", LABEL_LEFT, -(LABEL_TOP + LABEL_Y_OFFSET))
+        row.label:SetPoint("RIGHT", row, "RIGHT", -(TIME_WIDTH + UNSEEN_WIDTH + TIME_RIGHT + UNSEEN_TIME_GAP + LABEL_UNSEEN_GAP), 0)
+        row.label:SetHeight(TOP_ROW_HEIGHT)
+        row.label:SetJustifyV("BOTTOM")
         row.timeText:ClearAllPoints()
-        row.timeText:SetPoint("RIGHT", row, "RIGHT", -TIME_RIGHT, 0)
+        row.timeText:SetPoint("TOPRIGHT", row, "TOPRIGHT", -TIME_RIGHT, -LABEL_TOP)
         row.timeText:SetWidth(TIME_WIDTH)
+        row.timeText:SetHeight(TOP_ROW_HEIGHT)
         row.timeText:SetJustifyH("RIGHT")
+        row.timeText:SetJustifyV("BOTTOM")
+        row.unseenText:ClearAllPoints()
+        row.unseenText:SetPoint("TOPRIGHT", row, "TOPRIGHT", -(TIME_RIGHT + TIME_WIDTH + UNSEEN_TIME_GAP), -(LABEL_TOP + UNSEEN_Y_OFFSET))
+        row.unseenText:SetWidth(UNSEEN_WIDTH)
+        row.unseenText:SetHeight(TOP_ROW_HEIGHT)
+        row.unseenText:SetJustifyH("RIGHT")
+        row.unseenText:SetJustifyV("BOTTOM")
         row.label:SetTextColor(uiColors.neutral.textPrimary[1], uiColors.neutral.textPrimary[2], uiColors.neutral.textPrimary[3], uiColors.neutral.textPrimary[4] or 1)
         row.timeText:SetTextColor(uiColors.neutral.textTimer[1], uiColors.neutral.textTimer[2], uiColors.neutral.textTimer[3], uiColors.neutral.textTimer[4] or 1)
         row.unseenText:SetShown(display.unseenText ~= nil and display.unseenText ~= "")

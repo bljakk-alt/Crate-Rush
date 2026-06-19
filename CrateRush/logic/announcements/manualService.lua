@@ -220,6 +220,13 @@ local function send(messageID, tokens)
     return false
 end
 
+local function sendManualMessage(message)
+    if CrateRush.manualAnnouncements and CrateRush.manualAnnouncements.send then
+        return CrateRush.manualAnnouncements:send(message)
+    end
+    return false
+end
+
 local function messageIDForCockpitTrigger(trigger, fallback)
     if CrateRush.announcementMessageConfig and CrateRush.announcementMessageConfig.getMessageIDByCockpitTrigger then
         return CrateRush.announcementMessageConfig:getMessageIDByCockpitTrigger(trigger, fallback)
@@ -264,6 +271,25 @@ function service:announceTimerRow(row)
     return send(MESSAGE_ID.AUTO_TIMER_SOON, tokens)
 end
 
+function service:previewTimerRow(row)
+    if type(row) ~= "table" or row.noData then return nil end
+    local tokens = baseTokens(row)
+    tokens["%time_to_next%"] = row.timeText or formatEta(row.remaining) or "unknown"
+    return formatMessage(MESSAGE_ID.AUTO_TIMER_SOON, tokens)
+end
+
+function service:previewShardStatus(payload)
+    if type(payload) ~= "table" then return nil end
+    if not payload.shardID or payload.shardID == "" then return nil end
+    return getZoneName(payload.zoneID, payload.zoneName) .. " - Shard: " .. tostring(payload.shardID)
+end
+
+function service:announceShardStatus(payload)
+    local message = self:previewShardStatus(payload)
+    if not message then return false end
+    return sendManualMessage(message)
+end
+
 function service:announcePrediction(payload)
     if type(payload) ~= "table" or not payload.dropX or not payload.dropY then return false end
     local dropRemaining = remainingFromPrediction(payload, "secondsToDrop")
@@ -273,6 +299,17 @@ function service:announcePrediction(payload)
     tokens["%time_to_drop%"] = formatEta(dropRemaining) or "unknown"
     tokens["%time_to_land%"] = formatEta(remainingFromPrediction(payload, "secondsToLand")) or "unknown"
     return send(messageIDForCockpitTrigger(COCKPIT_TRIGGER.PREDICTION_BOX_SHIFT_CLICK, MESSAGE_ID.PREDICTION), tokens)
+end
+
+function service:previewPrediction(payload)
+    if type(payload) ~= "table" or not payload.dropX or not payload.dropY then return nil end
+    local dropRemaining = remainingFromPrediction(payload, "secondsToDrop")
+    if not dropRemaining or dropRemaining <= 0 then return nil end
+
+    local tokens = baseTokens(payload)
+    tokens["%time_to_drop%"] = formatEta(dropRemaining) or "unknown"
+    tokens["%time_to_land%"] = formatEta(remainingFromPrediction(payload, "secondsToLand")) or "unknown"
+    return formatMessage(messageIDForCockpitTrigger(COCKPIT_TRIGGER.PREDICTION_BOX_SHIFT_CLICK, MESSAGE_ID.PREDICTION), tokens)
 end
 
 function service:pinPrediction(payload)
@@ -289,6 +326,17 @@ function service:announceTiming(statePayload, predictionPayload)
     tokens["%time_to_drop%"] = formatEta(remainingFromPrediction(predictionPayload, "secondsToDrop")) or "unknown"
     tokens["%time_to_land%"] = formatEta(remainingFromPrediction(predictionPayload, "secondsToLand")) or "unknown"
     return send(messageIDForCockpitTrigger(COCKPIT_TRIGGER.TIMING_BOX_SHIFT_CLICK, MESSAGE_ID.PREDICTION), tokens)
+end
+
+function service:previewTiming(statePayload, predictionPayload)
+    if type(predictionPayload) ~= "table" or not predictionPayload.dropX or not predictionPayload.dropY then
+        return nil
+    end
+
+    local tokens = baseTokens(predictionPayload)
+    tokens["%time_to_drop%"] = formatEta(remainingFromPrediction(predictionPayload, "secondsToDrop")) or "unknown"
+    tokens["%time_to_land%"] = formatEta(remainingFromPrediction(predictionPayload, "secondsToLand")) or "unknown"
+    return formatMessage(messageIDForCockpitTrigger(COCKPIT_TRIGGER.TIMING_BOX_SHIFT_CLICK, MESSAGE_ID.PREDICTION), tokens)
 end
 
 function service:announceState(statePayload, predictionPayload)
@@ -321,11 +369,49 @@ function service:announceState(statePayload, predictionPayload)
     return send(messageID, tokens)
 end
 
+function service:previewState(statePayload, predictionPayload)
+    if type(statePayload) ~= "table" then return nil end
+
+    local payload = {}
+    for key, value in pairs(statePayload) do
+        payload[key] = value
+    end
+
+    if type(predictionPayload) == "table" then
+        if payload.dropX == nil then payload.dropX = predictionPayload.dropX end
+        if payload.dropY == nil then payload.dropY = predictionPayload.dropY end
+    end
+
+    if CrateRush.announcementTemplates and CrateRush.announcementTemplates.build then
+        local announcement = CrateRush.announcementTemplates:build(payload)
+        if announcement and announcement.message then
+            local messageID = messageIDForCockpitTrigger(COCKPIT_TRIGGER.STATE_BOX_SHIFT_CLICK, announcement.messageID)
+            return formatMessage(messageID, announcement.tokens)
+        end
+    end
+
+    local messageID = messageIDForState(payload.state)
+    if not messageID then return nil end
+
+    local tokens = baseTokens(payload)
+    tokens["%state%"] = humanState(payload.state)
+    tokens["%state_en%"] = humanState(payload.state)
+    return formatMessage(messageID, tokens)
+end
+
 function service:announceEnemy(enemyPayload)
     if type(enemyPayload) ~= "table" or not enemyPayload.hasData then return false end
     local tokens = baseTokens(enemyPayload)
     tokens["%enemy_total%"] = enemyPayload.totalRange or enemyPayload.total or "unknown"
     tokens["%healers%"] = enemyPayload.healerRange or enemyPayload.healers or "unknown"
     return send(messageIDForCockpitTrigger(COCKPIT_TRIGGER.ENEMY_BOX_SHIFT_CLICK, MESSAGE_ID.ENEMY_PRESENCE), tokens)
+end
+
+function service:previewEnemy(enemyPayload)
+    if type(enemyPayload) ~= "table" or not enemyPayload.hasData then return nil end
+    local tokens = baseTokens(enemyPayload)
+    tokens["%enemy_total%"] = enemyPayload.totalRange or enemyPayload.total or "unknown"
+    tokens["%healers%"] = enemyPayload.healerRange or enemyPayload.healers or "unknown"
+    return formatMessage(messageIDForCockpitTrigger(COCKPIT_TRIGGER.ENEMY_BOX_SHIFT_CLICK, MESSAGE_ID.ENEMY_PRESENCE), tokens)
 end
 

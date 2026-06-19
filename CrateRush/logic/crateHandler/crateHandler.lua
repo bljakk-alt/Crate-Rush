@@ -309,20 +309,19 @@ end
 function crateHandler:onNpcAnnouncement(text, npcName, language, channelString, target, flags, unknown1, channelNumber, channelName, unknown2, lineID, guid, ...)
     if not text or not npcName then return end
 
-    CrateRush.logDebug("NPC_ANNOUNCEMENT | npc=" .. tostring(npcName) .. " text=" .. tostring(text))
-
-    if not crateCycleAnchorService:isCrateCycleAnchor(text, npcName) then return end
-
-    CrateRush.logDebug("CRATE_CYCLE_ANCHOR | npc=" .. tostring(npcName))
-
     local mapID = zoneResolver:getPlayerMapID()
     if not mapID then return end
 
     local crateZoneID = zoneResolver:resolveCrateZoneID(mapID)
     if not crateZoneID then
-        CrateRush.logDebug("CRATE_CYCLE_ANCHOR | ignored outside crate zone rawZone=" .. tostring(mapID))
         return
     end
+
+    CrateRush.logDebug("NPC_ANNOUNCEMENT | rawZone=" .. tostring(mapID))
+
+    if not crateCycleAnchorService:isCrateCycleAnchor(text, npcName) then return end
+
+    CrateRush.logDebug("CRATE_CYCLE_ANCHOR | accepted")
 
     local confirmedShardID = shardService:getConfirmedShard(crateZoneID)
     if confirmedShardID then

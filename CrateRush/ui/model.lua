@@ -8,6 +8,7 @@ local SHARD_STATUS = CrateRush.SHARD_STATUS or {}
 local TIMING = CrateRush.TIMING or {}
 local LANDED_ACTION_SECONDS = TIMING.LANDED_ACTION_SECONDS or 300
 local CLAIMED_LOOT_WINDOW_SECONDS = TIMING.CLAIMED_LOOT_WINDOW_SECONDS or 58
+local COCKPIT_EMPTY_TEXT = "n/a"
 
 local ADDON_MEDIA = "Interface/AddOns/CrateRush/media/"
 local INDICATOR_WARMODE_ON  = ADDON_MEDIA .. "icons/indicator_warmode_on"
@@ -69,7 +70,7 @@ end
 
 local function compactSeconds(seconds)
     seconds = numberOr(seconds, nil)
-    if not seconds then return "--" end
+    if not seconds then return COCKPIT_EMPTY_TEXT end
     seconds = math.max(0, math.floor(seconds))
     if seconds < 60 then
         return tostring(seconds) .. "s"
@@ -83,7 +84,7 @@ local function compactSeconds(seconds)
 end
 
 local function approximateSeconds(seconds)
-    if seconds == nil then return "--" end
+    if seconds == nil then return COCKPIT_EMPTY_TEXT end
     return "~" .. compactSeconds(seconds)
 end
 
@@ -192,6 +193,7 @@ function model:formatHeader(payload)
     end
 
     return {
+        zoneID   = payload.zoneID,
         zoneName = zoneName,
         shardID  = shardID,
         status   = status,
@@ -282,21 +284,21 @@ end
 function model:getCockpitPlaceholder()
     return {
         state = {
-            label = "--",
-            detail = "--",
+            label = COCKPIT_EMPTY_TEXT,
+            detail = COCKPIT_EMPTY_TEXT,
         },
         timing = {
-            label = "--",
-            detail = "--",
+            label = COCKPIT_EMPTY_TEXT,
+            detail = COCKPIT_EMPTY_TEXT,
         },
         prediction = {
-            label = "--",
-            detail = "--",
+            label = COCKPIT_EMPTY_TEXT,
+            detail = COCKPIT_EMPTY_TEXT,
         },
         enemy = {
             factionLabel = "Enemy",
-            totalRange = "--",
-            healerRange = "--",
+            totalRange = COCKPIT_EMPTY_TEXT,
+            healerRange = COCKPIT_EMPTY_TEXT,
         },
     }
 end
@@ -314,7 +316,7 @@ function model:formatCrateState(payload, predictionPayload)
         dropTimingAvailable = false,
         landTimingAvailable = false,
         label = "Waiting",
-        detail = "--",
+        detail = COCKPIT_EMPTY_TEXT,
         remainingText = payload.remaining and (formatTime(payload.remaining) .. " left") or nil,
     }
 
@@ -351,7 +353,7 @@ function model:formatCrateState(payload, predictionPayload)
         display.mode = "action"
         display.label = "Claimed"
         display.detail = "by " .. factionText(payload.claimedFaction or currentFactionKey())
-        display.remainingText = "Loot " .. compactSeconds(remaining)
+        display.remainingText = compactSeconds(remaining)
     elseif CrateRush.isCrateStateClaimedByOppositeFaction and CrateRush.isCrateStateClaimedByOppositeFaction(state) then
         local remaining = remainingFrom(payload.claimedAt or payload.lastSeenAt, CLAIMED_LOOT_WINDOW_SECONDS)
         if not remaining or remaining <= 0 then return display end
@@ -378,13 +380,41 @@ function model:formatPrediction(payload, statePayload)
     payload = type(payload) == "table" and payload or {}
     statePayload = type(statePayload) == "table" and statePayload or {}
 
-    local x = formatCoord(payload.dropX)
-    local y = formatCoord(payload.dropY)
-    local coords = x and y and (x .. ", " .. y) or "--"
+    local CRATE_STATE = CrateRush.CRATE_STATE or {}
+    local state = statePayload.state
+    if (CrateRush.isCrateStateClaimedByOppositeFaction and CrateRush.isCrateStateClaimedByOppositeFaction(state))
+        or state == CRATE_STATE.CLAIMED_BY_OPPOSITE_FACTION
+    then
+        return {
+            coords = COCKPIT_EMPTY_TEXT,
+            confidenceText = COCKPIT_EMPTY_TEXT,
+            dropText = COCKPIT_EMPTY_TEXT,
+            landText = COCKPIT_EMPTY_TEXT,
+        }
+    end
 
+    local hasObservedLocation = statePayload.dropX ~= nil and statePayload.dropY ~= nil
+    local preferObservedLocation = hasObservedLocation
+        and (state == CRATE_STATE.DROPPING
+            or state == CRATE_STATE.LANDED
+            or (CrateRush.isCrateStateClaimed and CrateRush.isCrateStateClaimed(state)))
+
+    local displayX = payload.dropX
+    local displayY = payload.dropY
+    if preferObservedLocation or displayX == nil or displayY == nil then
+        displayX = statePayload.dropX
+        displayY = statePayload.dropY
+    end
+
+    local x = formatCoord(displayX)
+    local y = formatCoord(displayY)
+    local coords = x and y and (x .. ", " .. y) or COCKPIT_EMPTY_TEXT
+
+    local confidenceText = payload.confidenceLabel or COCKPIT_EMPTY_TEXT
     local confidence = numberOr(payload.confidence, nil)
-    local confidenceText = payload.confidenceLabel or "--"
-    if confidence then
+    if preferObservedLocation then
+        confidenceText = "100%"
+    elseif confidence and confidence > 0 then
         confidenceText = tostring(math.floor((confidence * 100) + 0.5)) .. "%"
     end
 
@@ -394,8 +424,6 @@ function model:formatPrediction(payload, statePayload)
         elapsed = math.max(0, CrateRush.clock:serverTime() - predictedAt)
     end
 
-    local state = statePayload.state
-    local CRATE_STATE = CrateRush.CRATE_STATE or {}
     local secondsToDrop = payload.secondsToDrop and math.max(0, numberOr(payload.secondsToDrop, 0) - elapsed) or nil
     local secondsToLand = payload.secondsToLand and math.max(0, numberOr(payload.secondsToLand, 0) - elapsed) or nil
 

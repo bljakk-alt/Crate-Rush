@@ -6,6 +6,7 @@ CrateRush.cockpit = cockpit
 
 local uiModel = CrateRush.uiModel
 local uiActions = CrateRush.uiActions
+local uiTooltips = CrateRush.tooltips
 local surface = CrateRush.surface
 local COLORS = CrateRush.theme:getUIColors()
 local COCKPIT_COLORS = CrateRush.theme:getUIColors().cockpit
@@ -19,10 +20,13 @@ local SYNC_HEIGHT = LAYOUT.syncHeight or 52
 local SECTION_GAP = LAYOUT.sectionGap or 10
 local PADDING = LAYOUT.padding or 16
 local COLUMN_EDGE_PADDING = math.max(8, PADDING - 4)
-local CONTENT_LABEL_TOP = -20
-local CONTENT_VALUE_BOTTOM = 7
+local CONTENT_LABEL_TOP = -3
+local CONTENT_VALUE_BOTTOM = 5
+local CONTENT_LABEL_FONT_SIZE = LAYOUT.contentLabelFontSize or 8
+local CONTENT_VALUE_FONT_SIZE = LAYOUT.contentValueFontSize or 10
+local EMPTY_TEXT = "n/a"
 local CONTENT_LABEL_COLOR = { 0.72, 0.76, 0.80, 0.92 }
-local STATE_LABEL_TOP = -14
+local STATE_LABEL_TOP = -6
 local ENEMY_WARNING_BG = { 0.24, 0.02, 0.02, 0.76 }
 local ENEMY_WARNING_BORDER = { 1.00, 0.16, 0.16, 0.88 }
 local ENEMY_WARNING_TEXT = { 1.00, 0.34, 0.34, 1.00 }
@@ -82,6 +86,12 @@ local function isClaimedState(state)
         return CrateRush.cockpitDisplay:isClaimedState(state)
     end
     return false
+end
+
+local function setFontSize(fontString, size)
+    if not fontString or not size then return end
+    local font, _, flags = fontString:GetFont()
+    fontString:SetFont(font or STANDARD_TEXT_FONT, size, flags)
 end
 
 local function payloadMatchesConfirmedSelection(payload)
@@ -178,6 +188,12 @@ local function createTitle(card, text)
     return title
 end
 
+local function hideCardTitle(card)
+    if card and card.title then
+        card.title:Hide()
+    end
+end
+
 local function createColumnText(card, text, side, topOffset, justify)
     local fontString = card:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     local colWidth = math.floor((WIDTH - (COLUMN_EDGE_PADDING * 2) - 12) / 2)
@@ -189,6 +205,7 @@ local function createColumnText(card, text, side, topOffset, justify)
     fontString:SetWidth(colWidth)
     fontString:SetJustifyH(justify or (side == "right" and "RIGHT" or "LEFT"))
     fontString:SetText(text or "")
+    setFontSize(fontString, CONTENT_LABEL_FONT_SIZE)
     return fontString
 end
 
@@ -202,8 +219,8 @@ local function createColumnValue(card, side, bottomOffset, justify)
     end
     fontString:SetWidth(colWidth)
     fontString:SetJustifyH(justify or "RIGHT")
-    fontString:SetText("--")
-    applyFontSize(fontString, 1)
+    fontString:SetText(EMPTY_TEXT)
+    setFontSize(fontString, CONTENT_VALUE_FONT_SIZE)
     setTextColor(fontString, COCKPIT_COLORS.value)
     return fontString
 end
@@ -212,8 +229,8 @@ local function createDivider(card)
     local separator = card:CreateTexture(nil, "ARTWORK")
     separator:SetTexture("Interface/Buttons/WHITE8X8")
     separator:SetWidth(1)
-    separator:SetPoint("TOP", card, "TOP", 0, -24)
-    separator:SetPoint("BOTTOM", card, "BOTTOM", 0, 7)
+    separator:SetPoint("TOP", card, "TOP", 0, -15)
+    separator:SetPoint("BOTTOM", card, "BOTTOM", 0, 6)
     setTextureColor(separator, getDividerColor())
     card.divider = separator
     return separator
@@ -238,26 +255,31 @@ end
 
 local function createLifecycleStrip(card)
     local strip = CreateFrame("Frame", nil, card)
-    strip:SetPoint("TOPLEFT", card, "TOPLEFT", PADDING, -22)
+    strip:SetPoint("TOPLEFT", card, "TOPLEFT", PADDING, -9)
     strip:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -PADDING, 3)
     card.lifecycleStrip = strip
 
-    local labels = { "FLYING", "DROP", "LAND" }
+    local labels = { "FLY", "DROP", "LAND" }
     local railWidth = math.max(112, WIDTH - (PADDING * 2) - 42)
+    local stripOffsetX = -12
     local dotCenterX = 16
     local dotY = -18
     local dotRadius = 7
-    local lineGap = 3
+    local lineGap = 4
     local lineHeight = 4
+    local labelWidth = 48
     strip.dots = {}
     strip.labels = {}
     strip.lines = {}
 
     for i, labelText in ipairs(labels) do
-        local x = ((i - 1) / 2) * railWidth
+        local x = (((i - 1) / 2) * railWidth) + stripOffsetX
+        local dotX = x + dotCenterX
 
         local label = strip:CreateFontString(nil, "OVERLAY", "GameFontNormalSmall")
-        label:SetPoint("TOPLEFT", strip, "TOPLEFT", x, 0)
+        label:SetPoint("TOPLEFT", strip, "TOPLEFT", dotX - (labelWidth / 2), 0)
+        label:SetWidth(labelWidth)
+        label:SetJustifyH("CENTER")
         label:SetText(labelText)
         applyFontSize(label, -1)
         setTextColor(label, COCKPIT_COLORS.muted)
@@ -271,13 +293,13 @@ local function createLifecycleStrip(card)
             backgroundColor = { 0, 0, 0, 0 },
             borderColor = COCKPIT_COLORS.muted,
         })
-        dot:SetPoint("CENTER", strip, "TOPLEFT", x + dotCenterX, dotY)
+        dot:SetPoint("CENTER", strip, "TOPLEFT", dotX, dotY)
         strip.dots[i] = dot
 
         if i < #labels then
-            local nextX = (i / 2) * railWidth
-            local lineX = x + dotCenterX + dotRadius + lineGap
-            local lineEndX = nextX + dotCenterX - dotRadius - lineGap
+            local nextDotX = ((i / 2) * railWidth) + stripOffsetX + dotCenterX
+            local lineX = dotX + dotRadius + lineGap
+            local lineEndX = nextDotX - dotRadius - lineGap
             local lineWidth = math.max(16, lineEndX - lineX)
 
             local line = strip:CreateTexture(nil, "BACKGROUND")
@@ -318,13 +340,14 @@ end
 local function createStateCard(parent, topOffset)
     local card = createCard(parent, "CrateRushCockpitStateCard", topOffset, CARD_HEIGHT)
     createTitle(card, "STATE")
+    hideCardTitle(card)
 
     local stateText = card:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     stateText:SetPoint("TOPLEFT", card, "TOPLEFT", PADDING, STATE_LABEL_TOP)
     stateText:SetPoint("TOPRIGHT", card, "TOPRIGHT", -PADDING, STATE_LABEL_TOP)
     stateText:SetJustifyH("LEFT")
     stateText:SetJustifyV("TOP")
-    stateText:SetText("--")
+    stateText:SetText(EMPTY_TEXT)
     applyFontSize(stateText, -1)
     setTextColor(stateText, COCKPIT_COLORS.value)
     card.stateText = stateText
@@ -342,12 +365,12 @@ local function createStateCard(parent, topOffset)
 
     local actionTimerText = card:CreateFontString(nil, "OVERLAY", "GameFontNormal")
     actionTimerText:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", -PADDING, CONTENT_VALUE_BOTTOM)
-    actionTimerText:SetWidth(72)
+    actionTimerText:SetWidth(42)
     actionTimerText:SetJustifyH("RIGHT")
     actionTimerText:SetJustifyV("MIDDLE")
     if actionTimerText.SetWordWrap then actionTimerText:SetWordWrap(false) end
     actionTimerText:SetText("")
-    applyFontSize(actionTimerText, 1)
+    setFontSize(actionTimerText, math.max(8, CONTENT_VALUE_FONT_SIZE - 1))
     setTextColor(actionTimerText, COLORS.shardStatus.matched)
     card.actionTimerText = actionTimerText
 
@@ -358,26 +381,25 @@ end
 local function createTimingCard(parent, topOffset)
     local card = createCard(parent, "CrateRushCockpitTimingCard", topOffset, TIMING_HEIGHT)
     createTitle(card, "TIMING")
+    hideCardTitle(card)
 
     local leftLabel = createColumnText(card, "Drop", "left", CONTENT_LABEL_TOP, "LEFT")
-    applyFontSize(leftLabel, -1)
     setTextColor(leftLabel, CONTENT_LABEL_COLOR)
     card.dropLabel = leftLabel
 
     local leftValue = createColumnValue(card, "left", CONTENT_VALUE_BOTTOM, "RIGHT")
-    leftValue:SetText("--")
+    leftValue:SetText(EMPTY_TEXT)
     setTextColor(leftValue, COCKPIT_COLORS.muted)
     card.dropValue = leftValue
 
     createDivider(card)
 
     local rightLabel = createColumnText(card, "Land", "right", CONTENT_LABEL_TOP, "LEFT")
-    applyFontSize(rightLabel, -1)
     setTextColor(rightLabel, CONTENT_LABEL_COLOR)
     card.landLabel = rightLabel
 
     local rightValue = createColumnValue(card, "right", CONTENT_VALUE_BOTTOM, "RIGHT")
-    rightValue:SetText("--")
+    rightValue:SetText(EMPTY_TEXT)
     setTextColor(rightValue, COCKPIT_COLORS.muted)
     card.landValue = rightValue
 
@@ -387,26 +409,25 @@ end
 local function createPredictionCard(parent, topOffset)
     local card = createCard(parent, "CrateRushCockpitPredictionCard", topOffset, CARD_HEIGHT)
     createTitle(card, "PREDICTION")
+    hideCardTitle(card)
 
-    local locationLabel = createColumnText(card, "Location", "left", CONTENT_LABEL_TOP, "LEFT")
-    applyFontSize(locationLabel, -1)
+    local locationLabel = createColumnText(card, "Loc", "left", CONTENT_LABEL_TOP, "LEFT")
     setTextColor(locationLabel, CONTENT_LABEL_COLOR)
     card.locationLabel = locationLabel
 
     local coords = createColumnValue(card, "left", CONTENT_VALUE_BOTTOM, "RIGHT")
-    coords:SetText("--")
+    coords:SetText(EMPTY_TEXT)
     setTextColor(coords, COCKPIT_COLORS.value)
     card.coords = coords
 
     createDivider(card)
 
-    local confidenceLabel = createColumnText(card, "Confidence", "right", CONTENT_LABEL_TOP, "LEFT")
-    applyFontSize(confidenceLabel, -1)
+    local confidenceLabel = createColumnText(card, "Conf", "right", CONTENT_LABEL_TOP, "LEFT")
     setTextColor(confidenceLabel, CONTENT_LABEL_COLOR)
     card.confidenceLabel = confidenceLabel
 
     local confidence = createColumnValue(card, "right", CONTENT_VALUE_BOTTOM, "RIGHT")
-    confidence:SetText("--")
+    confidence:SetText(EMPTY_TEXT)
     setTextColor(confidence, COCKPIT_COLORS.value)
     card.confidence = confidence
 
@@ -416,26 +437,25 @@ end
 local function createEnemyCard(parent, topOffset)
     local card = createCard(parent, "CrateRushCockpitEnemyCard", topOffset, CARD_HEIGHT)
     createTitle(card, "ENEMY")
+    hideCardTitle(card)
 
     local factionLabel = createColumnText(card, "Total", "left", CONTENT_LABEL_TOP, "LEFT")
-    applyFontSize(factionLabel, -1)
     setTextColor(factionLabel, CONTENT_LABEL_COLOR)
     card.factionLabel = factionLabel
 
     local faction = createColumnValue(card, "left", CONTENT_VALUE_BOTTOM, "RIGHT")
-    faction:SetText("--")
+    faction:SetText(EMPTY_TEXT)
     setTextColor(faction, COCKPIT_COLORS.value)
     card.faction = faction
 
     createDivider(card)
 
     local healersLabel = createColumnText(card, "Healers", "right", CONTENT_LABEL_TOP, "LEFT")
-    applyFontSize(healersLabel, -1)
     setTextColor(healersLabel, CONTENT_LABEL_COLOR)
     card.healersLabel = healersLabel
 
     local healers = createColumnValue(card, "right", CONTENT_VALUE_BOTTOM, "RIGHT")
-    healers:SetText("--")
+    healers:SetText(EMPTY_TEXT)
     setTextColor(healers, COCKPIT_COLORS.value)
     card.healers = healers
 
@@ -567,6 +587,143 @@ local function createSyncCard(parent, topOffset)
     return card
 end
 
+local function previewService()
+    return CrateRush.manualAnnouncementService
+end
+
+local function showCardTooltip(owner, title, body, showShiftClick, extraOptions)
+    if not uiTooltips then return end
+    local options = type(extraOptions) == "table" and extraOptions or {}
+    options.showShiftClick = showShiftClick
+    uiTooltips:show(owner, title, body, options)
+end
+
+local function hideCardTooltip()
+    if uiTooltips then uiTooltips:hide() end
+end
+
+local function wireCardTooltip(card, title, bodyProvider, showShiftClick)
+    if not card then return end
+    card:HookScript("OnEnter", function(self)
+        local body, options
+        if bodyProvider then
+            body, options = bodyProvider()
+        end
+        local effectiveShiftClick = showShiftClick
+        if type(options) == "table" and options.showShiftClick ~= nil then
+            effectiveShiftClick = options.showShiftClick
+            options.showShiftClick = nil
+        end
+        showCardTooltip(self, title, body, effectiveShiftClick, options)
+    end)
+    card:HookScript("OnLeave", hideCardTooltip)
+end
+
+local function tooltipLine(text, color, bold)
+    return { text = text, color = color or COCKPIT_COLORS.value, bold = bold == true }
+end
+
+local function classDisplayName(classFile)
+    if LOCALIZED_CLASS_NAMES_MALE and LOCALIZED_CLASS_NAMES_MALE[classFile] then
+        return LOCALIZED_CLASS_NAMES_MALE[classFile]
+    end
+    return tostring(classFile or "Unknown")
+end
+
+local function classDisplayColor(classFile)
+    local color = RAID_CLASS_COLORS and RAID_CLASS_COLORS[classFile] or nil
+    if color then
+        return { color.r or color[1] or 1, color.g or color[2] or 1, color.b or color[3] or 1, 1 }
+    end
+    return COCKPIT_COLORS.value
+end
+
+local function stateTooltipLines()
+    local payload = selectedKey and stateByKey[selectedKey] or nil
+    local predictionPayload = selectedKey and predictionByKey[selectedKey] or nil
+    if not predictionPayload and selectedZoneID then
+        predictionPayload = predictionByZone[tostring(selectedZoneID)]
+    end
+    local announcePayload = getManualStatePayload(false)
+    local display = uiModel and uiModel.formatCrateState and uiModel:formatCrateState(payload, predictionPayload) or nil
+    if not display or display.mode == "empty" then
+        return nil, { showShiftClick = false }
+    end
+    local stateLabel = display.label or display.detail or "Waiting"
+    return nil, {
+        showShiftClick = announcePayload ~= nil,
+        lines = {
+            tooltipLine("State: " .. tostring(stateLabel), COCKPIT_COLORS.value, true),
+        },
+    }
+end
+
+local function timingTooltipLines()
+    local payload = selectedKey and predictionByKey[selectedKey] or nil
+    if not payload and selectedZoneID then
+        payload = predictionByZone[tostring(selectedZoneID)]
+    end
+    local statePayload = selectedKey and stateByKey[selectedKey] or nil
+    local announcePredictionPayload = getManualPredictionPayload(false)
+    local announceStatePayload = getManualStatePayload(false)
+    local display = uiModel and uiModel.formatPrediction and uiModel:formatPrediction(payload, statePayload) or {}
+    return nil, {
+        showShiftClick = announcePredictionPayload ~= nil or announceStatePayload ~= nil,
+        lines = {
+            tooltipLine("Drop: " .. tostring(display.dropText or EMPTY_TEXT), COCKPIT_COLORS.value, true),
+            tooltipLine("Land: " .. tostring(display.landText or EMPTY_TEXT), COCKPIT_COLORS.value, true),
+        },
+    }
+end
+
+local function predictionTooltipLines()
+    local payload = selectedKey and predictionByKey[selectedKey] or nil
+    if not payload and selectedZoneID then
+        payload = predictionByZone[tostring(selectedZoneID)]
+    end
+    local statePayload = selectedKey and stateByKey[selectedKey] or nil
+    local announcePayload = getManualPredictionPayload(false)
+    local display = uiModel and uiModel.formatPrediction and uiModel:formatPrediction(payload, statePayload) or {}
+    return nil, {
+        showShiftClick = announcePayload ~= nil,
+        lines = {
+            tooltipLine("Location: " .. tostring(display.coords or EMPTY_TEXT), COCKPIT_COLORS.value, true),
+            tooltipLine("Confidence: " .. tostring(display.confidenceText or EMPTY_TEXT), COCKPIT_COLORS.value, true),
+        },
+    }
+end
+
+local function enemyTooltipLines()
+    local payload = getManualEnemyPayload(false)
+    local lines = {
+        tooltipLine("Total: " .. tostring(type(payload) == "table" and (payload.totalRange or payload.total) or EMPTY_TEXT), COCKPIT_COLORS.value, true),
+        tooltipLine("Healers: " .. tostring(type(payload) == "table" and (payload.healerRange or payload.healers) or EMPTY_TEXT), COCKPIT_COLORS.value, true),
+    }
+
+    if type(payload) == "table" and type(payload.classCounts) == "table" then
+        local classes = {}
+        for classFile, count in pairs(payload.classCounts) do
+            classes[#classes + 1] = { classFile = classFile, count = count }
+        end
+        table.sort(classes, function(a, b)
+            return classDisplayName(a.classFile) < classDisplayName(b.classFile)
+        end)
+        for _, entry in ipairs(classes) do
+            lines[#lines + 1] = {
+                text = classDisplayName(entry.classFile),
+                rightText = tostring(entry.count),
+                color = classDisplayColor(entry.classFile),
+                rightColor = classDisplayColor(entry.classFile),
+            }
+        end
+    end
+
+    return nil, {
+        lines = lines,
+        showShiftClick = type(payload) == "table" and payload.hasData == true,
+    }
+end
+
 local function repaintCards()
     local border = surfaceBorder("card", 0.56)
     for _, card in pairs(cards) do
@@ -633,6 +790,30 @@ local function createFrame()
         end
     end)
 
+    wireCardTooltip(cards.state, "State", function()
+        return stateTooltipLines()
+    end, true)
+    wireCardTooltip(cards.timing, "Timing", function()
+        return timingTooltipLines()
+    end, true)
+    wireCardTooltip(cards.prediction, "Prediction", function()
+        return predictionTooltipLines()
+    end, true)
+    wireCardTooltip(cards.enemy, "Enemy", function()
+        return enemyTooltipLines()
+    end, true)
+    wireCardTooltip(cards.sync, "Sync", function()
+        local playerLabel, playerColor = getSyncPlayerDisplay()
+        local syncDisplay = getSyncDisplay()
+        local status = syncDisplay and syncDisplay.status or "unavailable"
+        return nil, {
+            lines = {
+                { text = tostring(playerLabel or "Player-Realm"), color = playerColor or COCKPIT_COLORS.value },
+                { text = "Sync " .. tostring(status), color = COCKPIT_COLORS.value },
+            },
+        }
+    end, false)
+
     frame:SetScript("OnUpdate", function(self, elapsed)
         self.accum = (self.accum or 0) + elapsed
         if self.accum >= 1 then
@@ -672,7 +853,7 @@ local function getSelectedStateDisplay()
         lifecycleActive = false,
         mode = "idle",
         label = state.label or "Waiting",
-        detail = state.detail or "--",
+        detail = state.detail or EMPTY_TEXT,
         activeStep = 0,
     }
 end
@@ -686,11 +867,16 @@ local function getSelectedPredictionDisplay()
     local placeholder = getPlaceholder()
     local prediction = placeholder.prediction or {}
     return {
-        coords = prediction.detail or "--",
-        confidenceText = "--",
-        dropText = "--",
-        landText = "--",
+        coords = prediction.detail or EMPTY_TEXT,
+        confidenceText = EMPTY_TEXT,
+        dropText = EMPTY_TEXT,
+        landText = EMPTY_TEXT,
     }
+end
+
+local function compactTileCoords(coords)
+    if type(coords) ~= "string" then return coords end
+    return coords:gsub(",%s*", "/")
 end
 
 local function renderLifecycleStrip(display)
@@ -757,7 +943,7 @@ local function positionStateContent(hasRightTimer)
 
     card.remainingText:ClearAllPoints()
     card.remainingText:SetPoint("BOTTOMLEFT", card, "BOTTOMLEFT", PADDING, CONTENT_VALUE_BOTTOM)
-    card.remainingText:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", hasRightTimer and -86 or -PADDING, CONTENT_VALUE_BOTTOM)
+    card.remainingText:SetPoint("BOTTOMRIGHT", card, "BOTTOMRIGHT", hasRightTimer and -46 or -PADDING, CONTENT_VALUE_BOTTOM)
     card.remainingText:SetJustifyH("LEFT")
     card.remainingText:SetJustifyV("MIDDLE")
 end
@@ -792,7 +978,7 @@ local function renderStateText(display)
         return
     end
 
-    cards.state.stateText:SetText(display.detail or display.label or "--")
+    cards.state.stateText:SetText(display.detail or display.label or EMPTY_TEXT)
     cards.state.remainingText:SetText(display.remainingText or "")
     if cards.state.actionTimerText then
         cards.state.actionTimerText:SetText("")
@@ -808,13 +994,13 @@ function cockpit:render()
     renderStateText(stateDisplay)
     renderLifecycleStrip(stateDisplay)
 
-    cards.timing.dropValue:SetText(predictionDisplay.dropText or "--:--")
-    cards.timing.landValue:SetText(predictionDisplay.landText or "--:--")
-    setTextColor(cards.timing.dropValue, predictionDisplay.dropText == "--" and COCKPIT_COLORS.muted or COCKPIT_COLORS.value)
-    setTextColor(cards.timing.landValue, predictionDisplay.landText == "--" and COCKPIT_COLORS.muted or COCKPIT_COLORS.value)
+    cards.timing.dropValue:SetText(predictionDisplay.dropText or EMPTY_TEXT)
+    cards.timing.landValue:SetText(predictionDisplay.landText or EMPTY_TEXT)
+    setTextColor(cards.timing.dropValue, predictionDisplay.dropText == EMPTY_TEXT and COCKPIT_COLORS.muted or COCKPIT_COLORS.value)
+    setTextColor(cards.timing.landValue, predictionDisplay.landText == EMPTY_TEXT and COCKPIT_COLORS.muted or COCKPIT_COLORS.value)
 
-    cards.prediction.coords:SetText(predictionDisplay.coords or "--")
-    cards.prediction.confidence:SetText(predictionDisplay.confidenceText or "--")
+    cards.prediction.coords:SetText(compactTileCoords(predictionDisplay.coords) or EMPTY_TEXT)
+    cards.prediction.confidence:SetText(predictionDisplay.confidenceText or EMPTY_TEXT)
 
     if cards.sync then
         local playerLabel, playerColor = getSyncPlayerDisplay()
@@ -828,7 +1014,7 @@ function cockpit:render()
     local enemyWarning = enemyPayload and enemyPayload.warning == "enemy_nameplates_off"
     if enemyWarning then
         cards.enemy.faction:SetText("Nameplates OFF")
-        cards.enemy.healers:SetText("--")
+        cards.enemy.healers:SetText(EMPTY_TEXT)
         surface:setColors(cards.enemy, ENEMY_WARNING_BG, ENEMY_WARNING_BORDER)
         setTextColor(cards.enemy.title, ENEMY_WARNING_TEXT)
         setTextColor(cards.enemy.faction, ENEMY_WARNING_TEXT)
@@ -837,8 +1023,8 @@ function cockpit:render()
             setTextureColor(cards.enemy.divider, ENEMY_WARNING_BORDER)
         end
     else
-        cards.enemy.faction:SetText(enemyPayload and enemyPayload.totalRange or "--")
-        cards.enemy.healers:SetText(enemyPayload and enemyPayload.healerRange or "--")
+        cards.enemy.faction:SetText(enemyPayload and enemyPayload.totalRange or EMPTY_TEXT)
+        cards.enemy.healers:SetText(enemyPayload and enemyPayload.healerRange or EMPTY_TEXT)
         surface:setColors(cards.enemy, COCKPIT_COLORS.bg, surfaceBorder("card", 0.56))
         updateDivider(cards.enemy)
         setTextColor(cards.enemy.title, getTitleColor())

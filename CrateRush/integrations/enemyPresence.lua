@@ -31,6 +31,10 @@ local CLASS_NUM = {
     DEMONHUNTER = 12,
     EVOKER = 13,
 }
+local NUM_CLASS = {}
+for classFile, classNum in pairs(CLASS_NUM) do
+    NUM_CLASS[classNum] = classFile
+end
 
 local HEALER_CONFIRMED_DPS = 0
 local HEALER_CONFIRMED = 1
@@ -313,9 +317,14 @@ local function buildSummary(reason)
     local confidence = "LOW"
     local anyMedium = false
     local anyHigh = false
+    local classCounts = {}
 
     for _, entry in pairs(entries) do
         total = total + 1
+        local classFile = entry.class or NUM_CLASS[tonumber(entry.classNum)]
+        if classFile then
+            classCounts[classFile] = (classCounts[classFile] or 0) + 1
+        end
         if tonumber(entry.healerBit) == HEALER_CONFIRMED then
             confirmed = confirmed + 1
         elseif tonumber(entry.healerBit) == HEALER_POSSIBLE then
@@ -349,6 +358,7 @@ local function buildSummary(reason)
         healerMin = confirmed,
         healerMax = confirmed + possible,
         healerRange = tostring(confirmed) .. "+" .. tostring(possible),
+        classCounts = classCounts,
         confidence = confidence,
         updatedAt = serverTime(),
     }
@@ -360,10 +370,20 @@ end
 
 function enemyPresence:publishSummary(reason)
     local summary = buildSummary(reason)
+    local classSignature = ""
+    if type(summary.classCounts) == "table" then
+        local parts = {}
+        for classFile, count in pairs(summary.classCounts) do
+            parts[#parts + 1] = tostring(classFile) .. "=" .. tostring(count)
+        end
+        table.sort(parts)
+        classSignature = table.concat(parts, ",")
+    end
     local signature = tostring(summary.active) .. ":" .. tostring(summary.total)
         .. ":" .. tostring(summary.confirmedHealers) .. ":" .. tostring(summary.possibleHealers)
         .. ":" .. tostring(summary.confidence) .. ":" .. tostring(summary.zoneID)
         .. ":" .. tostring(summary.shardID) .. ":" .. tostring(summary.warning)
+        .. ":" .. classSignature
     if signature == lastSummarySignature then return false end
     lastSummarySignature = signature
     publish(DOMAIN_EVENT.ENEMY_PRESENCE_CHANGED, summary)

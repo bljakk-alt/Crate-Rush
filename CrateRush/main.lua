@@ -1,9 +1,14 @@
 -- CrateRush
 -- main.lua - Entry point. Bootstraps all modules.
 
+local addonName = ...
+local title = C_AddOns and C_AddOns.GetAddOnMetadata(addonName, "Title") or GetAddOnMetadata(addonName, "Title")
+local version = C_AddOns and C_AddOns.GetAddOnMetadata(addonName, "Version") or GetAddOnMetadata(addonName, "Version")
+
 CrateRush = CrateRush or {}
-CrateRush.displayName = "Crate Rush"
-CrateRush.version = "0.9.1"
+CrateRush.addonName = addonName
+CrateRush.displayName = title
+CrateRush.version = version
 CrateRush.versionLabel = CrateRush.displayName .. " " .. CrateRush.version
 
 function CrateRush.logDebug(message)
@@ -30,33 +35,6 @@ function CrateRush:Print(message)
     else
         CrateRush.logDebug("CrateRush " .. tostring(message or ""))
     end
-end
-
-local function getAddonMetadata(addonName, field)
-    if not addonName or not field then return nil end
-
-    if C_AddOns and C_AddOns.GetAddOnMetadata then
-        local ok, value = pcall(C_AddOns.GetAddOnMetadata, addonName, field)
-        if ok and value then return value end
-    end
-
-    if GetAddOnMetadata then
-        local ok, value = pcall(GetAddOnMetadata, addonName, field)
-        if ok and value then return value end
-    end
-
-    return nil
-end
-
-local function applyAddonMetadata(addonName)
-    CrateRush.addonName = addonName or CrateRush.addonName or "CrateRush"
-    CrateRush.displayName = getAddonMetadata(CrateRush.addonName, "Title")
-        or CrateRush.displayName
-        or CrateRush.addonName
-    CrateRush.version = getAddonMetadata(CrateRush.addonName, "Version")
-        or CrateRush.version
-        or "unknown"
-    CrateRush.versionLabel = CrateRush.displayName .. " " .. CrateRush.version
 end
 
 local function applyThemeToUI()
@@ -175,9 +153,7 @@ end
 local AceComm = LibStub("AceComm-3.0")
 AceComm:Embed(CrateRush)
 
-local function onInitialize(addonName)
-    applyAddonMetadata(addonName)
-
+local function onInitialize()
     CrateRushDB = CrateRushDB or {}
     CrateRushDebugDB = CrateRushDebugDB or {}
     CrateRush.storage:init(CrateRushDB)
@@ -310,9 +286,9 @@ end
 -- Bootstrap via ADDON_LOADED event
 local bootFrame = CreateFrame("Frame")
 bootFrame:RegisterEvent("ADDON_LOADED")
-bootFrame:SetScript("OnEvent", function(self, event, addonName)
-    if addonName == "CrateRush" then
-        onInitialize(addonName)
+bootFrame:SetScript("OnEvent", function(self, event, loadedAddonName)
+    if loadedAddonName == addonName then
+        onInitialize()
         self:UnregisterEvent("ADDON_LOADED")
     end
 end)

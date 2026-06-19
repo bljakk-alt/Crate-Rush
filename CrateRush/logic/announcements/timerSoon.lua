@@ -45,14 +45,6 @@ local function getZoneName(zoneID, fallback)
     return zoneID and tostring(zoneID) or "Unknown"
 end
 
-local function getAnnouncementZoneName(zoneID, fallback)
-    local zoneName = getZoneName(zoneID, fallback)
-    if tonumber(zoneID) == 2437 then
-        return "Zul Aman"
-    end
-    return zoneName
-end
-
 local function getZoneEnglishName(zoneID)
     if CrateRush.zoneResolver and CrateRush.zoneResolver.getCrateZoneEnglishName then
         return CrateRush.zoneResolver:getCrateZoneEnglishName(zoneID)
@@ -83,7 +75,7 @@ end
 
 local function buildTokens(item)
     return {
-        ["%zone%"] = getAnnouncementZoneName(item.zoneID, item.zoneName),
+        ["%zone%"] = getZoneName(item.zoneID, item.zoneName),
         ["%zone_en%"] = getZoneEnglishName(item.zoneID),
         ["%zone_english%"] = getZoneEnglishName(item.zoneID),
         ["%shard%"] = item.shardID and tostring(item.shardID) or "?",
